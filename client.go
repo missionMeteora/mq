@@ -27,7 +27,6 @@ func NewClient(loc string, key, token Chunk, op Operator) (cl *Client, err error
 		cl.op = NewOp(nil, nil)
 	}
 
-	cl.ErrC = cl.errC
 	cl.conn = newConn(Chunk{}, nil, NewOp(cl.op.OnConnect, cl.onDisconnect), nil, cl.errC)
 
 	// Dial within a goroutine so that we don't hold up the initalization process
@@ -53,8 +52,6 @@ type Client struct {
 
 	// Internal full-access channel
 	errC *chanchan.ChanChan
-	// Exported receive-only channel
-	ErrC chanchan.Receiver
 
 	closed uint32
 }
@@ -96,6 +93,11 @@ func (c *Client) Dial() (err error) {
 	// Reset the dialback
 	c.dialb.Reset()
 	return
+}
+
+// ErrC returns a chanchan.Receiver interface which is backed by c.errC
+func (c *Client) ErrC() chanchan.Receiver {
+	return c.errC
 }
 
 // Close will close the client instance
