@@ -87,30 +87,3 @@ func (d *Dialback) Wait() {
 	s := d.Next()
 	time.Sleep(time.Second * time.Duration(s))
 }
-
-// NewSema returns a pointer to a new semaphore
-func NewSema() *Sema {
-	return &Sema{
-		c: make(chan struct{}, 1),
-	}
-}
-
-// Sema is a simple semaphore helper
-type Sema struct {
-	c chan struct{}
-}
-
-// Acquire will acquire a lock from the semaphore
-func (s *Sema) Acquire() {
-	s.c <- struct{}{}
-}
-
-// Release will release a lock from the semaphore
-func (s *Sema) Release() {
-	select {
-	case <-s.c:
-	default:
-		panic("tried to release a sema which has not been acquired")
-	}
-	return
-}

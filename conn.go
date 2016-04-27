@@ -32,11 +32,6 @@ func newConn(id Chunk, nc net.Conn, op Operator, db *iodb.DB, errC *chanchan.Cha
 
 		op: op,
 
-		// Sender sema with a len of one
-		ssem: common.NewSema(),
-		// Listener sema with a len of one
-		lsem: common.NewSema(),
-
 		errC: errC,
 	}
 
@@ -74,10 +69,10 @@ type conn struct {
 	errC *chanchan.ChanChan
 
 	// Sender sema
-	ssem *common.Sema
+	sm sync.Mutex
 
 	// Listener sema
-	lsem *common.Sema
+	lm sync.Mutex
 
 	// The current state of the connection:
 	//	- Zero represents an ready state
@@ -95,8 +90,7 @@ func (c *conn) refreshSettings(id Chunk, nc net.Conn) (err error) {
 
 	c.out.Close()
 
-	// Acquire a lock from the sender sema
-	c.ssem.Acquire()
+	c.sm.Lock()
 	c.out = newMsgQueue(4, 32)
 
 	// Ensure net.Conn has been closed
@@ -104,23 +98,21 @@ func (c *conn) refreshSettings(id Chunk, nc net.Conn) (err error) {
 		c.nc.Close()
 	}
 
-	// Acquire a lock from the listener sema
-	c.lsem.Acquire()
+	c.lm.Lock()
 	c.id = id
 	c.nc = nc
 	c.ncm.Unlock()
 	atomic.SwapUint32(&c.state, 0)
 
 	// Release the locks from the listener and sender semas
-	c.lsem.Release()
-	c.ssem.Release()
+	c.lm.Unlock()
+	c.sm.Unlock()
 
 	return c.setConnected()
 }
 
 func (c *conn) listener() {
-	// Acquire a lock from the listener sema
-	c.lsem.Acquire()
+	c.lm.Lock()
 
 	var (
 		buf  [common.HeaderLen]byte // Header buffer
@@ -176,7 +168,7 @@ func (c *conn) listener() {
 		}
 
 		// If our connection is closed, set the error to io.EOF
-		if c.isClosed() {
+		if !c.isConnected() {
 			err = io.EOF
 		}
 	}
@@ -186,13 +178,11 @@ func (c *conn) listener() {
 		c.errC.Send(err)
 	}
 
-	// Release the lock to the listener sema
-	c.lsem.Release()
+	c.lm.Unlock()
 }
 
 func (c *conn) sender() {
-	// Acquire a lock from the sender sema
-	c.ssem.Acquire()
+	c.sm.Lock()
 
 	var (
 		buf []byte // Message buffer
@@ -210,7 +200,7 @@ func (c *conn) sender() {
 		c.pl.Put(buf)
 
 		// If our connection is closed, set the error to io.EOF
-		if c.isClosed() {
+		if !c.isConnected() {
 			err = io.EOF
 		}
 	}
@@ -220,8 +210,7 @@ func (c *conn) sender() {
 		c.errC.Send(err)
 	}
 
-	// Release the lock to the sender sema
-	c.ssem.Release()
+	c.sm.Unlock()
 }
 
 // Process handles inbound messages and determines which actions need to be taken
@@ -355,8 +344,7 @@ func (c *conn) Close() error {
 		errs = append(errs, err)
 	}
 
-	// Acquire a lock from the sender sema to ensure the sender process has ended
-	c.ssem.Acquire()
+	c.sm.Lock()
 
 	// Lock and close net.Conn to avoid additional inbound messages
 	c.ncm.Lock()
@@ -371,8 +359,7 @@ func (c *conn) Close() error {
 		errs = append(errs, err)
 	}
 
-	// Acquire a lock from the listener sema to ensure the listening process has ended
-	c.lsem.Acquire()
+	c.lm.Lock()
 
 	// Dump remaining waiting funcs
 	c.rw.Dump()
@@ -382,8 +369,8 @@ func (c *conn) Close() error {
 		c.op.OnDisconnect(c.id)
 	}
 
-	c.lsem.Release()
-	c.ssem.Release()
+	c.lm.Unlock()
+	c.sm.Unlock()
 
 	return errs.Err()
 }
