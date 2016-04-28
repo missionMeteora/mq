@@ -22,7 +22,9 @@ type reqWait struct {
 func (rw *reqWait) Get(id uuid.UUID) (fn ReqFunc, ok bool) {
 	rw.mux.Lock()
 	if fn, ok = rw.m[id]; ok {
-		// If entry exists, delete it
+		// If entry exists, we need to remove it from the list
+		// Note: Think of the ReqFunc as being checked-in during Put
+		// and checked-out during Get.
 		delete(rw.m, id)
 	}
 	rw.mux.Unlock()
