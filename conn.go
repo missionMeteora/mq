@@ -60,7 +60,7 @@ type conn struct {
 	// Request func manager
 	rw *reqWait
 	// Byteslice pool
-	pl *pool
+	pl pool
 
 	// Operator for handling connection and disconnections
 	op Operator
