@@ -92,7 +92,7 @@ func (s *Server) listener() {
 		if err = s.c.Put(hs.key, nc, s.op, s.errC); err != nil {
 			// Error encountered while putting, return error to connecting client
 			sendMsg(nc, mtStatement, statusError, []byte(err.Error()))
-			c.Close()
+			nc.Close()
 			continue
 		}
 
