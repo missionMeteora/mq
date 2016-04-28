@@ -179,9 +179,9 @@ func (c Chunk) String() string {
 	return string(c[:])
 }
 
-func newMsgQueue(len, cap int) *msgQueue {
+func newMsgQueue(l, c int) *msgQueue {
 	return &msgQueue{
-		cc: chanchan.NewChanChan(len, cap, chanchan.FullWait),
+		cc: chanchan.NewChanChan(l, c, chanchan.FullWait),
 	}
 }
 
