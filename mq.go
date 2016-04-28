@@ -48,6 +48,9 @@ var (
 
 	// ErrCannotReplaceActiveNetConn is returned when a net.Conn is attempted to be replaced while it is still active
 	ErrCannotReplaceActiveNetConn = errors.New("cannot replace active net.Conn")
+
+	// ErrInvalidChunkLen is returned when a string provided is too long to be converted into a chunk
+	ErrInvalidChunkLen = errors.New("chunk length cannot exceed 16 characters")
 )
 
 // ReqFunc is used when receiving a response or a statement
@@ -145,7 +148,13 @@ func NewChunk(b []byte) (c Chunk) {
 }
 
 // NewChunkFromString returns a new chunk using the provided byteslice
-func NewChunkFromString(s string) (c Chunk) {
+func NewChunkFromString(s string) (c Chunk, err error) {
+	if len(s) > 16 {
+		// We are going to set error, then continue on. The reason for this is
+		// because some users may actively know their strings are being truncated
+		// and do not care.
+		err = ErrInvalidChunkLen
+	}
 	copy(c[:], s)
 	return
 }

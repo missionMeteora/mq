@@ -42,12 +42,16 @@ func (a *auth) Delete(key Chunk) {
 
 // IsValid will validate the provided credentials
 func (a *auth) IsValid(h handshake) (ok bool) {
+	a.mux.Lock()
 	var tkn Chunk
 	if tkn, ok = a.str[h.key]; !ok {
 		// If key doesn't exist within our store, return
 		return
 	}
 
+	ok = tkn == h.token
+	a.mux.Unlock()
+
 	// If tokens match, return true
-	return tkn == h.token
+	return
 }

@@ -121,8 +121,10 @@ func (s *Server) isClosed() bool {
 // GetAuth will return the token for a matching key
 func (s *Server) GetAuth(key string) (str string, ok bool) {
 	var tkn Chunk
+	keyC, _ := NewChunkFromString(key)
+
 	// Get token for provided key
-	if tkn, ok = s.a.Get(NewChunkFromString(key)); !ok {
+	if tkn, ok = s.a.Get(keyC); !ok {
 		// No matches exist for this key within the Auth manager
 		return
 	}
@@ -132,15 +134,30 @@ func (s *Server) GetAuth(key string) (str string, ok bool) {
 }
 
 // PutAuth will put a token as the value for a matching key
-func (s *Server) PutAuth(key, token string) {
+func (s *Server) PutAuth(key, token string) (err error) {
+	var (
+		kC, tC Chunk
+	)
+
+	if kC, err = NewChunkFromString(key); err != nil {
+		return
+	}
+
+	if tC, err = NewChunkFromString(token); err != nil {
+		return
+	}
+
 	// Convert key and token to Chunks, then call Auth.Put
-	s.a.Put(NewChunkFromString(key), NewChunkFromString(token))
+	s.a.Put(kC, tC)
+	return
 }
 
 // DeleteAuth will delete the entry matching key (if exists)
 func (s *Server) DeleteAuth(key string) {
-	// Convert key to Chunk, then call Auth.Delete
-	s.a.Delete(NewChunkFromString(key))
+	// Convert key to Chunk
+	kC, _ := NewChunkFromString(key)
+	// Call delete on auth
+	s.a.Delete(kC)
 }
 
 // ListConns returns a list of keys for all the current conns
@@ -153,10 +170,15 @@ func (s *Server) Statement(key string, b []byte) (err error) {
 	var (
 		c  *conn
 		ok bool
+		kC Chunk
 	)
 
+	if kC, err = NewChunkFromString(key); err != nil {
+		return
+	}
+
 	// Get connection
-	if c, ok = s.c.Get(NewChunkFromString(key)); !ok {
+	if c, ok = s.c.Get(kC); !ok {
 		// Connection does not exist, return ErrConnDoesNotExist
 		return ErrConnDoesNotExist
 	}
@@ -181,9 +203,14 @@ func (s *Server) Request(key string, b []byte, fn ReqFunc) (err error) {
 	var (
 		c  *conn
 		ok bool
+		kC Chunk
 	)
 
-	if c, ok = s.c.Get(NewChunkFromString(key)); !ok {
+	if kC, err = NewChunkFromString(key); err != nil {
+		return
+	}
+
+	if c, ok = s.c.Get(kC); !ok {
 		// Connection does not exist, return ErrConnDoesNotExist
 		return ErrConnDoesNotExist
 	}
@@ -208,10 +235,15 @@ func (s *Server) Receive(key string, rec Receiver) (err error) {
 	var (
 		c  *conn
 		ok bool
+		kC Chunk
 	)
 
+	if kC, err = NewChunkFromString(key); err != nil {
+		return
+	}
+
 	// Get connection
-	if c, ok = s.c.Get(NewChunkFromString(key)); !ok {
+	if c, ok = s.c.Get(kC); !ok {
 		// Connection does not exist, return ErrConnDoesNotExist
 		return ErrConnDoesNotExist
 	}
@@ -222,7 +254,8 @@ func (s *Server) Receive(key string, rec Receiver) (err error) {
 
 // IsConnected will return whether or not a client (referenced by key) is connected
 func (s *Server) IsConnected(key string) (ok bool) {
-	_, ok = s.c.Get(NewChunkFromString(key))
+	kC, _ := NewChunkFromString(key)
+	_, ok = s.c.Get(kC)
 	return
 }
 

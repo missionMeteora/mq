@@ -1,11 +1,19 @@
 package mq
 
 import (
-
-	//"fmt"
-	//"os"
+	"fmt"
+	"os"
 	"testing"
 	"time"
+)
+
+const (
+	clntName = "MoodyMoose"
+	clntTkn  = "DingDong"
+
+	mainPort = ":1337"
+	altPort  = ":1338"
+	srvName  = "HonestHyena"
 )
 
 var (
@@ -19,13 +27,9 @@ var (
 	stmnt = []byte("Hai there!")
 	req   = []byte("How are you?")
 
-	clntName     = "MoodyMoose"
-	clntChunk    = NewChunkFromString(clntName)
-	clntTkn      = "DingDong"
-	clntTknChunk = NewChunkFromString(clntTkn)
-
-	srvName  = "HonestHyena"
-	srvChunk = NewChunkFromString(srvName)
+	clntChunk, _    = NewChunkFromString(clntName)
+	clntTknChunk, _ = NewChunkFromString(clntTkn)
+	srvChunk, _     = NewChunkFromString(srvName)
 )
 
 type testItem struct{}
@@ -37,6 +41,45 @@ func (t *testItem) Statement(b []byte) {
 func (t *testItem) Response(b []byte) (r []byte) {
 	val = b
 	return []byte{'o', 'k'}
+}
+
+func TestMain(m *testing.M) {
+	var err error
+	connected := make(chan struct{}, 1)
+	op := NewOp(
+		func(ch Chunk) error {
+			fmt.Println("Hai!", ch.String())
+			if ch == clntChunk {
+				connected <- struct{}{}
+			}
+
+			return nil
+		},
+		func(ch Chunk) {
+			fmt.Println(ch, "disconnected")
+		},
+	)
+
+	if s, err = NewServer(mainPort, srvChunk, op); err != nil {
+		fmt.Println("Error getting new server", err)
+		return
+	}
+
+	s.PutAuth(clntName, clntTkn)
+
+	if c, err = NewClient(mainPort, clntChunk, clntTknChunk, nil); err != nil {
+		fmt.Println("Error getting new client", err)
+		return
+	}
+
+	<-connected
+
+	go func() {
+		for c.Receive(&ti) == nil {
+		}
+	}()
+
+	os.Exit(m.Run())
 }
 
 func TestClientFirst(t *testing.T) {
@@ -52,12 +95,12 @@ func TestClientFirst(t *testing.T) {
 		return nil
 	}, nil)
 
-	if c, err = NewClient(":1337", clntChunk, clntTknChunk, nil); err != nil {
+	if c, err = NewClient(altPort, clntChunk, clntTknChunk, nil); err != nil {
 		t.Error("Error getting new client", err)
 		return
 	}
 
-	if s, err = NewServer(":1337", srvChunk, op, KeyToken{clntName, clntTkn}); err != nil {
+	if s, err = NewServer(altPort, srvChunk, op, KeyToken{clntName, clntTkn}); err != nil {
 		t.Error("Error getting new server", err)
 		return
 	}
@@ -85,12 +128,12 @@ func TestClientReconnect(t *testing.T) {
 		return nil
 	}, nil)
 
-	if s, err = NewServer(":1337", srvChunk, op, KeyToken{clntName, clntTkn}); err != nil {
+	if s, err = NewServer(altPort, srvChunk, op, KeyToken{clntName, clntTkn}); err != nil {
 		t.Error("Error getting new server", err)
 		return
 	}
 
-	if c, err = NewClient(":1337", clntChunk, clntTknChunk, nil); err != nil {
+	if c, err = NewClient(altPort, clntChunk, clntTknChunk, nil); err != nil {
 		t.Error("Error getting new client", err)
 		return
 	}
@@ -104,7 +147,7 @@ func TestClientReconnect(t *testing.T) {
 	}))
 	c.Close()
 
-	if c, err = NewClient(":1337", clntChunk, clntTknChunk, nil); err != nil {
+	if c, err = NewClient(altPort, clntChunk, clntTknChunk, nil); err != nil {
 		t.Error("Error getting new client", err)
 		return
 	}
@@ -121,57 +164,6 @@ func TestClientReconnect(t *testing.T) {
 	s.Close()
 	time.Sleep(time.Second * 1)
 }
-
-/*
-func TestMain(m *testing.M) {
-	var err error
-
-	connected := make(chan struct{}, 1)
-	op := NewOp(
-		func(ch Chunk) error {
-			if ch == clntChunk {
-				connected <- struct{}{}
-			}
-
-			return nil
-		},
-		func(ch Chunk) {
-			fmt.Println(ch, "disconnected")
-		},
-	)
-
-	if s, err = NewServer(":1337", srvChunk, op); err != nil {
-		fmt.Println("Error getting new server", err)
-	}
-
-	s.PutAuth(clntName, clntTkn)
-
-	if c, err = NewClient(":1337", clntChunk, clntTknChunk, nil); err != nil {
-		fmt.Println("Error getting new client", err)
-	}
-
-	<-connected
-
-	s.Close()
-
-	if s, err = NewServer(":1337", srvChunk, op); err != nil {
-		fmt.Println("Error getting new server", err)
-	}
-
-	s.PutAuth(clntName, clntTkn)
-
-	fmt.Println("Waiting for new connection")
-	<-connected
-	fmt.Println("Connected!")
-
-	go func() {
-		for c.Receive(&ti) == nil {
-		}
-	}()
-
-	os.Exit(m.Run())
-}
-*/
 
 func BenchmarkStatement(b *testing.B) {
 	for i := 0; i < b.N; i++ {
