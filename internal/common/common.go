@@ -48,29 +48,32 @@ const (
 )
 
 // NewDialback returns a pointer to a new instance of Dialback
-func NewDialback(cap, mult int) *Dialback {
+func NewDialback(c, m int) *Dialback {
 	return &Dialback{
-		cap:  cap,
-		mult: mult,
+		c: c,
+		m: m,
 	}
 }
 
 // Dialback is used to manage dial-back timing
 type Dialback struct {
-	mux  sync.Mutex
-	n    int
-	cap  int
-	mult int
+	mux sync.Mutex
+	// Current count
+	n int
+	// Capacity
+	c int
+	// Multiplier
+	m int
 }
 
 // Next will return the number of seconds until the next dial
 func (d *Dialback) Next() (seconds int) {
 	d.mux.Lock()
-	if d.n < d.cap {
+	if d.n < d.c {
 		d.n++
 	}
 
-	seconds = d.n * d.mult
+	seconds = d.n * d.m
 	d.mux.Unlock()
 	return
 }
