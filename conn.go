@@ -144,7 +144,6 @@ func (c *conn) listener() {
 
 			// Set m.Body by getting a slice from the pool for our needed length
 			m.body = c.pl.Get(blen)
-			m.body = m.body[:blen]
 			// Read from the net connection to m.body
 			if n, err = c.nc.Read(m.body); err != nil {
 				// An error was encountered, break
