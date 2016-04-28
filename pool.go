@@ -5,12 +5,19 @@ import (
 	//	"github.com/missionMeteora/lockie"
 )
 
+const (
+	psSmall  = 32
+	psMedium = 64
+	psLarge  = 128
+	psXLarge = 256
+)
+
 func newPool() pool {
 	return pool{
-		{New: func() interface{} { return make([]byte, 64) }},
-		{New: func() interface{} { return make([]byte, 128) }},
-		{New: func() interface{} { return make([]byte, 256) }},
-		{New: func() interface{} { return make([]byte, 512) }},
+		{New: func() interface{} { return make([]byte, psSmall) }},
+		{New: func() interface{} { return make([]byte, psMedium) }},
+		{New: func() interface{} { return make([]byte, psLarge) }},
+		{New: func() interface{} { return make([]byte, psXLarge) }},
 	}
 }
 
@@ -18,13 +25,13 @@ type pool [4]sync.Pool
 
 func (p *pool) Get(sz int64) (out []byte) {
 	switch {
-	case sz < 65:
+	case sz <= psSmall:
 		out = p[0].Get().([]byte)
-	case sz < 129:
+	case sz <= psMedium:
 		out = p[1].Get().([]byte)
-	case sz < 257:
+	case sz <= psLarge:
 		out = p[2].Get().([]byte)
-	case sz < 513:
+	case sz <= psXLarge:
 		out = p[3].Get().([]byte)
 	default:
 		out = make([]byte, 0, sz)
@@ -35,13 +42,13 @@ func (p *pool) Get(sz int64) (out []byte) {
 
 func (p *pool) Put(b []byte) {
 	switch len(b) {
-	case 64:
+	case psSmall:
 		p[0].Put(b)
-	case 128:
+	case psMedium:
 		p[1].Put(b)
-	case 256:
+	case psLarge:
 		p[2].Put(b)
-	case 512:
+	case psXLarge:
 		p[3].Put(b)
 	}
 }
