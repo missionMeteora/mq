@@ -22,8 +22,8 @@ var (
 	// ErrConnIsClosed is returned when an action is attempted on a closed connection
 	ErrConnIsClosed = errors.New("cannot perform action on a closed connection")
 
-	// ErrInvalidMsgType is returned when an invalid message type is provided
-	ErrInvalidMsgType = errors.New("invalid message type provided")
+	// ErrInvalidmsgType is returned when an invalid message type is provided
+	ErrInvalidmsgType = errors.New("invalid message type provided")
 
 	// ErrInvalidMsgHeader is returned when an invalid message header is provided
 	ErrInvalidMsgHeader = errors.New("invalid message header provided")
@@ -37,8 +37,8 @@ var (
 	// ErrCannotSetConnected is returned when a non-open connection is attempted to be set as connected
 	ErrCannotSetConnected = errors.New("cannot set to connected, connection is already connected or closed")
 
-	// ErrInvalidStatus is returned when an invalid status is provided in a message by a connected node
-	ErrInvalidStatus = errors.New("invalid message status")
+	// ErrInvalidstatus is returned when an invalid status is provided in a message by a connected node
+	ErrInvalidstatus = errors.New("invalid message status")
 
 	// ErrForbidden is returned when a connecting node does not have access to a requested server
 	ErrForbidden = errors.New("forbidden")

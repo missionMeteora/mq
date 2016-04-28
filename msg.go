@@ -5,13 +5,12 @@ import (
 
 	"github.com/missionMeteora/binny.v2"
 	"github.com/missionMeteora/jump/uuid"
-	"github.com/missionMeteora/mq/internal/common"
 )
 
 type msg struct {
 	id uuid.UUID
-	t  common.MsgType
-	s  common.Status
+	t  msgType
+	s  status
 
 	body []byte
 }
@@ -33,7 +32,7 @@ func (m *msg) Bytes(b []byte) (out []byte, n int) {
 	}
 
 	// Return populated byteslice
-	return b, int(common.HeaderLen + blen)
+	return b, int(HeaderLen + blen)
 }
 
 func (m *msg) MarshalBinny(enc *binny.Encoder) (err error) {
@@ -62,7 +61,7 @@ func (m *msg) UnmarshalBinny(dec *binny.Decoder) (err error) {
 		return
 	}
 
-	m.t = common.MsgType(t)
+	m.t = msgType(t)
 
 	if m.body, err = dec.ReadBytes(); err != nil {
 		return

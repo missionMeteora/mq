@@ -5,15 +5,14 @@ import (
 	"sync/atomic"
 
 	"github.com/missionMeteora/jump/chanchan"
-	jc "github.com/missionMeteora/jump/common"
-	"github.com/missionMeteora/mq/internal/common"
+	"github.com/missionMeteora/jump/common"
 )
 
 // NewClient returns a pointer to a new instance of Client
 func NewClient(loc string, key, token Chunk, op Operator) (cl *Client, err error) {
 	// Initialize new client and connection
 	cl = &Client{
-		dialb: common.NewDialback(6, 5),
+		dialb: Newdialback(6, 5),
 
 		loc:   loc,
 		key:   key,
@@ -43,7 +42,7 @@ func NewClient(loc string, key, token Chunk, op Operator) (cl *Client, err error
 type Client struct {
 	*conn
 
-	dialb *common.Dialback
+	dialb *dialback
 
 	loc   string
 	key   Chunk
@@ -111,7 +110,7 @@ func (c *Client) Close() error {
 		return ErrClientIsClosed
 	}
 
-	var errs jc.ErrorList
+	var errs common.ErrorList
 	// Close our internal connection
 	if err := c.conn.Close(); err != nil {
 		errs = errs.Append(err)
@@ -145,15 +144,15 @@ func clientHandshake(nc net.Conn, key, token Chunk) (id Chunk, err error) {
 
 	// Switch on handshake status
 	switch m.s {
-	case common.StatusInvalid:
+	case statusInvalid:
 		err = ErrInvalidMsgHeader
-	case common.StatusForbidden:
+	case statusForbidden:
 		err = ErrForbidden
-	case common.StatusOK:
+	case statusOK:
 		// Everything is good, move along now
 	default:
-		// None of our expected statuses were provided, set err to ErrInvalidStatus
-		err = ErrInvalidStatus
+		// None of our expected statuses were provided, set err to ErrInvalidstatus
+		err = ErrInvalidstatus
 	}
 
 	if err == nil {

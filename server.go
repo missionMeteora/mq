@@ -5,8 +5,7 @@ import (
 	"sync/atomic"
 
 	"github.com/missionMeteora/jump/chanchan"
-	jc "github.com/missionMeteora/jump/common"
-	"github.com/missionMeteora/mq/internal/common"
+	"github.com/missionMeteora/jump/common"
 )
 
 // NewServer returns a pointer to a new instance of Server
@@ -78,27 +77,27 @@ func (s *Server) listener() {
 
 		if hs, ok = s.handshake(nc); !ok {
 			// Invalid message header provided, send a message with a status of Invalid
-			sendMsg(nc, common.MTStatement, common.StatusInvalid, nil)
+			sendMsg(nc, mtStatement, statusInvalid, nil)
 			nc.Close()
 			continue
 		}
 
 		if !s.a.IsValid(hs) {
 			// Credentials are invalid, send a message with a status of Forbidden
-			sendMsg(nc, common.MTStatement, common.StatusForbidden, nil)
+			sendMsg(nc, mtStatement, statusForbidden, nil)
 			nc.Close()
 			continue
 		}
 
 		if err = s.c.Put(hs.key, nc, s.op, s.errC); err != nil {
 			// Error encountered while putting, return error to connecting client
-			sendMsg(nc, common.MTStatement, common.StatusError, []byte(err.Error()))
+			sendMsg(nc, mtStatement, statusError, []byte(err.Error()))
 			c.Close()
 			continue
 		}
 
 		// Connection successful, send server's ID to client
-		sendMsg(nc, common.MTStatement, common.StatusOK, s.id[:])
+		sendMsg(nc, mtStatement, statusOK, s.id[:])
 	}
 }
 
@@ -189,7 +188,7 @@ func (s *Server) Statement(key string, b []byte) (err error) {
 
 // StatementAll is used to send statements to all active connections
 func (s *Server) StatementAll(b []byte) error {
-	var errs jc.ErrorList
+	var errs common.ErrorList
 	s.c.ForEach(func(_ Chunk, c *conn) error {
 		errs = errs.Append(c.Statement(b))
 		return nil
@@ -221,7 +220,7 @@ func (s *Server) Request(key string, b []byte, fn ReqFunc) (err error) {
 
 // RequestAll is used to send statements to all active connections
 func (s *Server) RequestAll(b []byte, fn ReqFunc) error {
-	var errs jc.ErrorList
+	var errs common.ErrorList
 	s.c.ForEach(func(_ Chunk, c *conn) error {
 		errs = errs.Append(c.Request(b, fn))
 		return nil
@@ -270,7 +269,7 @@ func (s *Server) Close() error {
 		return ErrServerIsClosed
 	}
 
-	var errs jc.ErrorList
+	var errs common.ErrorList
 
 	// Close listener
 	errs = errs.Append(s.l.Close())

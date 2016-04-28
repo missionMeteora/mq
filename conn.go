@@ -9,9 +9,8 @@ import (
 
 	"github.com/missionMeteora/iodb"
 	"github.com/missionMeteora/jump/chanchan"
-	jc "github.com/missionMeteora/jump/common"
+	"github.com/missionMeteora/jump/common"
 	"github.com/missionMeteora/jump/uuid"
-	"github.com/missionMeteora/mq/internal/common"
 )
 
 // newConn returns a pointer to a new instance of conn
@@ -115,11 +114,11 @@ func (c *conn) listener() {
 	c.lm.Lock()
 
 	var (
-		buf  [common.HeaderLen]byte // Header buffer
-		blen int64                  // Body length
-		n    int                    // Amount read
-		m    msg                    // Message to be used by loop
-		err  error                  // Error to be used by loop
+		buf  [HeaderLen]byte // Header buffer
+		blen int64           // Body length
+		n    int             // Amount read
+		m    msg             // Message to be used by loop
+		err  error           // Error to be used by loop
 	)
 
 	// Loop until we encounter an error
@@ -128,14 +127,14 @@ func (c *conn) listener() {
 		if n, err = c.nc.Read(buf[:]); err != nil {
 			// Error was encountered, break
 			break
-		} else if n != common.HeaderLen {
-			// Read amount does not match common.HeaderLen (const), message header is invalid
+		} else if n != HeaderLen {
+			// Read amount does not match HeaderLen (const), message header is invalid
 			err = ErrInvalidMsgHeader
 			break
 		}
 
 		// Message type is located at the twenty-forth index of the buffer
-		m.t = common.MsgType(buf[24])
+		m.t = msgType(buf[24])
 
 		// Copy index zero to index sixteen (not includeding) to the message id (passed as a slice)
 		copy(m.id[:], buf[:16])
@@ -193,7 +192,7 @@ func (c *conn) sender() {
 
 	for m, err = c.out.Get(); err == nil; m, err = c.out.Get() {
 		// Set buf using slice pool
-		buf, n = m.Bytes(c.pl.Get(int64(common.HeaderLen + len(m.body))))
+		buf, n = m.Bytes(c.pl.Get(int64(HeaderLen + len(m.body))))
 		// Write buf to net.Conn
 		_, err = c.nc.Write(buf[:n])
 		// Return buf to slice pool
@@ -217,11 +216,11 @@ func (c *conn) sender() {
 func (c *conn) process(m msg) (err error) {
 	// Switch on message type
 	switch m.t {
-	case common.MTRequest, common.MTStatement:
+	case mtRequest, mtStatement:
 		// Put message in inbound queue
 		// We do not return body to pool until we are finished using it
 		return c.in.Put(m)
-	case common.MTResponse:
+	case mtResponse:
 		// Get request function for provided message id
 		if fn, ok := c.rw.Get(m.id); ok {
 			// Call fn with message body as an argument
@@ -233,8 +232,8 @@ func (c *conn) process(m msg) (err error) {
 		// If request function does not exist, set err to ErrReqFnDoesNotExist
 		err = ErrReqFnDoesNotExist
 	default:
-		// Provided type is not any of our currently recognized types, return ErrInvalidMsgType
-		err = ErrInvalidMsgType
+		// Provided type is not any of our currently recognized types, return ErrInvalidmsgType
+		err = ErrInvalidmsgType
 	}
 
 	if m.body != nil {
@@ -281,7 +280,7 @@ func (c *conn) Statement(b []byte) (err error) {
 		return ErrConnIsClosed
 	}
 
-	return c.out.Put(msg{uuid.New(), common.MTStatement, common.StatusOK, b})
+	return c.out.Put(msg{uuid.New(), mtStatement, statusOK, b})
 }
 
 // Request is a message which expects a response
@@ -290,7 +289,7 @@ func (c *conn) Request(b []byte, fn ReqFunc) (err error) {
 		return ErrConnIsClosed
 	}
 
-	m := msg{uuid.New(), common.MTRequest, common.StatusOK, b}
+	m := msg{uuid.New(), mtRequest, statusOK, b}
 	c.rw.Put(m.id, fn)
 	c.out.Put(m)
 
@@ -314,13 +313,13 @@ func (c *conn) Receive(rec Receiver) (err error) {
 	// As a result, we are going to avoid race-prone situations by saying "Goodbye! Enjoy your new home!"
 	// and NOT returning the byteslice to the pool.
 	switch m.t {
-	case common.MTRequest:
+	case mtRequest:
 		err = c.out.Put(msg{
 			id:   m.id, // Use same id as requesting message to match on the other side
-			t:    common.MTResponse,
+			t:    mtResponse,
 			body: rec.Response(m.body), // Process body and return result to responding body
 		})
-	case common.MTStatement:
+	case mtStatement:
 		rec.Statement(m.body)
 	default:
 		// This message type is invalid, return message body to pool
@@ -332,7 +331,7 @@ func (c *conn) Receive(rec Receiver) (err error) {
 
 // Close will close the conn and return a list of errors it encounters in the process
 func (c *conn) Close() error {
-	var errs jc.ErrorList
+	var errs common.ErrorList
 	if atomic.SwapUint32(&c.state, 2) == 2 {
 		// We are already closed, so we can return at this point
 		return append(errs, ErrConnIsClosed).Err()
@@ -379,30 +378,30 @@ func (c *conn) Close() error {
 // This is NOT intended to be used once the listener loop begins.
 func readMsg(nc net.Conn) (m msg, err error) {
 	var (
-		buf [common.HeaderLen]byte // Header buffer
-		n   int                    // Amount read
+		buf [HeaderLen]byte // Header buffer
+		n   int             // Amount read
 	)
 
 	if n, err = nc.Read(buf[:]); err != nil {
 		// Error was encountered, break
 		return
-	} else if n != common.HeaderLen {
-		// Read amount does not match common.HeaderLen (const), message header is invalid
+	} else if n != HeaderLen {
+		// Read amount does not match HeaderLen (const), message header is invalid
 		err = ErrInvalidMsgHeader
 		return
 	}
 
 	// Message type is located at the twenty-forth index of the buffer
-	m.t = common.MsgType(buf[24])
+	m.t = msgType(buf[24])
 
 	// Message type is located at the twenty-fifth index of the buffer
-	m.s = common.Status(buf[25])
+	m.s = status(buf[25])
 
 	// Copy index zero to index sixteen (not includeding) to the message id (passed as a slice)
 	copy(m.id[:], buf[:16])
 
 	// Save this for later
-	//if m.s != common.StatusOK || m.s !=
+	//if m.s != statusOK || m.s !=
 
 	// Set body length by reading eight bytes of the buffer starting at index sixteen
 	if blen := *(*int64)(unsafe.Pointer(&buf[16])); blen > 0 {
@@ -426,7 +425,7 @@ func readMsg(nc net.Conn) (m msg, err error) {
 
 // sendMsg is used as a under the hood helper function utilized during the initialization process
 // This is NOT intended to be used once the sender loop begins.
-func sendMsg(nc net.Conn, t common.MsgType, s common.Status, b []byte) (err error) {
+func sendMsg(nc net.Conn, t msgType, s status, b []byte) (err error) {
 	m := msg{
 		t:    t,
 		s:    s,
@@ -434,7 +433,7 @@ func sendMsg(nc net.Conn, t common.MsgType, s common.Status, b []byte) (err erro
 	}
 
 	// Set buf using slice pool
-	buf, n := m.Bytes(make([]byte, int64(common.HeaderLen+len(m.body))))
+	buf, n := m.Bytes(make([]byte, int64(HeaderLen+len(m.body))))
 	// Write buf to net.Conn
 	_, err = nc.Write(buf[:n])
 	return
