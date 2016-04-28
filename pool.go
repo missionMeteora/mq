@@ -34,21 +34,34 @@ func (p *pool) Get(sz int64) (out []byte) {
 	case sz <= psXLarge:
 		out = p[3].Get().([]byte)
 	default:
-		out = make([]byte, 0, sz)
+		out = make([]byte, sz)
 	}
 
-	return
+	return out[:sz]
 }
 
 func (p *pool) Put(b []byte) {
-	switch len(b) {
+	switch cap(b) {
 	case psSmall:
-		p[0].Put(b)
+		p[0].Put(sanitize(b))
 	case psMedium:
-		p[1].Put(b)
+		p[1].Put(sanitize(b))
 	case psLarge:
-		p[2].Put(b)
+		p[2].Put(sanitize(b))
 	case psXLarge:
-		p[3].Put(b)
+		p[3].Put(sanitize(b))
 	}
+}
+
+func sanitize(b []byte) []byte {
+	var i int
+	l := len(b)
+
+	for i < l {
+		b[i] = 0
+		i++
+	}
+
+	b = b[:cap(b)]
+	return b
 }
