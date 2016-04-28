@@ -409,10 +409,13 @@ func readMsg(nc net.Conn) (m msg, err error) {
 		// Body length  is greater than zero
 
 		// Set m.Body by getting a slice from the pool for our needed length
+		// Note: This does not utilize the pool because it's intended to be used
+		// very sparsely. Additionally, this is setup as a helper function so that
+		// it's not tied to only being used directly by Conns.
 		m.body = make([]byte, blen)
 
 		// Read from the net connection to m.body
-		if n, err = nc.Read(m.body[:blen]); err != nil {
+		if n, err = nc.Read(m.body); err != nil {
 			// An error was encountered, break
 			return
 		}
