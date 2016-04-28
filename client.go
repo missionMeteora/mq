@@ -157,7 +157,7 @@ func clientHandshake(nc net.Conn, key, token Chunk) (id Chunk, err error) {
 
 	if err == nil {
 		// We have no errors, get id from message body and return it!
-		id = NewChunk(m.body)
+		id, err = NewChunk(m.body)
 	}
 
 	return

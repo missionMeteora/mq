@@ -109,7 +109,10 @@ func (s *Server) handshake(c net.Conn) (h handshake, ok bool) {
 	}
 
 	// Return handshake from bytes in the buffer and set ok to true
-	return handshake{NewChunk(s.hsBuf[0:16]), NewChunk(s.hsBuf[16:32])}, true
+	h.key, _ = NewChunk(s.hsBuf[0:16])
+	h.token, _ = NewChunk(s.hsBuf[16:32])
+	ok = true
+	return
 }
 
 func (s *Server) isClosed() bool {

@@ -142,7 +142,13 @@ type handshake struct {
 }
 
 // NewChunk returns a new chunk using the provided byteslice
-func NewChunk(b []byte) (c Chunk) {
+func NewChunk(b []byte) (c Chunk, err error) {
+	if len(b) > 16 {
+		// We are going to set error, then continue on. The reason for this is
+		// because some users may actively know their strings are being truncated
+		// and do not care.
+		err = ErrInvalidChunkLen
+	}
 	copy(c[:], b)
 	return
 }
