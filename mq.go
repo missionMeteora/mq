@@ -200,8 +200,8 @@ func (mq *msgQueue) Put(m msg) error {
 }
 
 // Close will close the internal chanchan and return any error encountered while closing
-func (mq *msgQueue) Close() error {
-	return mq.cc.Close(true)
+func (mq *msgQueue) Close(wait bool) error {
+	return mq.cc.Close(wait)
 }
 
 // KeyToken is used to pass the key and token as a pair in string format

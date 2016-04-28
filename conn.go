@@ -87,8 +87,7 @@ func (c *conn) refreshSettings(id Chunk, nc net.Conn) (err error) {
 		return ErrConnIsClosed
 	}
 
-	c.out.Close()
-
+	c.out.Close(false)
 	c.sm.Lock()
 	c.out = newMsgQueue(4, 32)
 
@@ -337,8 +336,8 @@ func (c *conn) Close() error {
 		return append(errs, ErrConnIsClosed).Err()
 	}
 
-	// Close outbound channel
-	if err := c.out.Close(); err != nil {
+	// Close outbound channel, we are not waiting for close because acquiring c.sm lock will ensure closure
+	if err := c.out.Close(false); err != nil {
 		// Err exists, append err to errs
 		errs = append(errs, err)
 	}
@@ -352,8 +351,8 @@ func (c *conn) Close() error {
 	}
 	c.ncm.Unlock()
 
-	// Close inbound channel
-	if err := c.in.Close(); err != nil {
+	// Close inbound channel, we are not waiting for close because acquiring c.lm lock will ensure closure
+	if err := c.in.Close(false); err != nil {
 		// Err exists, append err to errs
 		errs = append(errs, err)
 	}
