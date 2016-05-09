@@ -9,28 +9,30 @@ import (
 )
 
 // NewServer returns a pointer to a new instance of Server
-func NewServer(loc string, key Chunk, op Operator, allowed ...KeyToken) (srv *Server, err error) {
+func NewServer(opts ServerOpts) (srv *Server, err error) {
 	s := Server{
-		id:   key,
 		a:    newAuth(),
 		c:    newConns(),
-		op:   op,
+		op:   opts.Op,
 		errC: chanchan.NewChanChan(4, 12, chanchan.FullPush),
 	}
 
-	for _, kt := range allowed {
+	if s.id, err = NewChunkFromString(opts.Name); err != nil {
+		return
+	}
+
+	for _, kt := range opts.Clients {
 		s.PutAuth(kt.Key, kt.Token)
 	}
 
 	// Listen at provided location
-	if s.l, err = net.Listen("tcp", loc); err != nil {
+	if s.l, err = net.Listen("tcp", opts.Loc); err != nil {
 		// Error encountered while attempting to listen, return err
 		return nil, err
 	}
 
 	// Start listener loop in a new go routine
 	go s.listener()
-
 	return &s, nil
 }
 

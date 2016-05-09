@@ -9,17 +9,21 @@ import (
 )
 
 // NewClient returns a pointer to a new instance of Client
-func NewClient(loc string, key, token Chunk, op Operator) (cl *Client, err error) {
+func NewClient(opts ClientOpts) (cl *Client, err error) {
 	// Initialize new client and connection
 	cl = &Client{
 		dialb: Newdialback(6, 5),
+		loc:   opts.Loc,
+		op:    opts.Op,
+		errC:  chanchan.NewChanChan(4, 12, chanchan.FullPush),
+	}
 
-		loc:   loc,
-		key:   key,
-		token: token,
-		op:    op,
+	if cl.key, err = NewChunkFromString(opts.Name); err != nil {
+		return
+	}
 
-		errC: chanchan.NewChanChan(4, 12, chanchan.FullPush),
+	if cl.token, err = NewChunkFromString(opts.Token); err != nil {
+		return
 	}
 
 	if cl.op == nil {
