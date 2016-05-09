@@ -51,6 +51,12 @@ var (
 
 	// ErrInvalidChunkLen is returned when a string provided is too long to be converted into a chunk
 	ErrInvalidChunkLen = errors.New("chunk length cannot exceed 16 characters")
+
+	// ErrEmptyName is returned when an empty name is provided
+	ErrEmptyName = errors.New("empty name provided")
+
+	// ErrEmptyToken is returned when an empty token is provided
+	ErrEmptyToken = errors.New("empty token provided")
 )
 
 // ReqFunc is used when receiving a response or a statement
