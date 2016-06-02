@@ -9,7 +9,7 @@ import (
 
 	"github.com/missionMeteora/iodb"
 	"github.com/missionMeteora/jump/chanchan"
-	"github.com/missionMeteora/jump/common"
+	"github.com/missionMeteora/jump/errors"
 	"github.com/missionMeteora/jump/uuid"
 )
 
@@ -329,7 +329,7 @@ func (c *conn) Receive(rec Receiver) (err error) {
 
 // Close will close the conn and return a list of errors it encounters in the process
 func (c *conn) Close() error {
-	var errs common.ErrorList
+	var errs errors.ErrorList
 	if atomic.SwapUint32(&c.state, 2) == 2 {
 		// We are already closed, so we can return at this point
 		return append(errs, ErrConnIsClosed).Err()

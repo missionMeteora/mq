@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 
 	"github.com/missionMeteora/jump/chanchan"
-	"github.com/missionMeteora/jump/common"
+	"github.com/missionMeteora/jump/errors"
 )
 
 // NewClient returns a pointer to a new instance of Client
@@ -114,7 +114,7 @@ func (c *Client) Close() error {
 		return ErrClientIsClosed
 	}
 
-	var errs common.ErrorList
+	var errs errors.ErrorList
 	// Close our internal connection
 	if err := c.conn.Close(); err != nil {
 		errs = errs.Append(err)
@@ -130,11 +130,11 @@ func (c *Client) Close() error {
 
 // clientHandshake will use a key and token to send a handshake to the server
 func clientHandshake(nc net.Conn, key, token Chunk) (id Chunk, err error) {
-	var hs [32]byte
+	var hs [64]byte
 	// Copy key to the first sixteen bytes
-	copy(hs[:16], key[:])
+	copy(hs[:32], key[:])
 	// Copy token to the last sixteen bytes
-	copy(hs[16:], token[:])
+	copy(hs[32:], token[:])
 	// Send handhshake to server
 	if _, err = nc.Write(hs[:]); err != nil {
 		return
