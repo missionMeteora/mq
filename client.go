@@ -130,12 +130,13 @@ func (c *Client) Close() error {
 
 // clientHandshake will use a key and token to send a handshake to the server
 func clientHandshake(nc net.Conn, key, token Chunk) (id Chunk, err error) {
-	var hs [64]byte
+	var hs [32]byte
 	// Copy key to the first sixteen bytes
-	copy(hs[:32], key[:])
+	copy(hs[:16], key[:])
 	// Copy token to the last sixteen bytes
-	copy(hs[32:], token[:])
+	copy(hs[16:], token[:])
 	// Send handhshake to server
+
 	if _, err = nc.Write(hs[:]); err != nil {
 		return
 	}
