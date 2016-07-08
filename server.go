@@ -1,6 +1,7 @@
 package mq
 
 import (
+	"io"
 	"net"
 	"sync/atomic"
 
@@ -105,7 +106,7 @@ func (s *Server) listener() {
 
 func (s *Server) handshake(c net.Conn) (h handshake, ok bool) {
 	// Read the handshake using our handshake buffer
-	if n, err := c.Read(s.hsBuf[:]); err != nil || n != 32 {
+	if n, err := io.ReadFull(c, s.hsBuf[:]); err != nil || n != 32 {
 		// Error exists OR handshake length was invalid, return early
 		return
 	}
