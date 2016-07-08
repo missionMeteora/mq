@@ -123,7 +123,7 @@ func (c *conn) listener() {
 	// Loop until we encounter an error
 	for err == nil {
 		// Read from net.Conn into our buffer
-		if n, err = c.nc.Read(buf[:]); err != nil {
+		if n, err = io.ReadFull(c.nc, buf[:]); err != nil {
 			// Error was encountered, break
 			break
 		} else if n != HeaderLen {
@@ -145,7 +145,7 @@ func (c *conn) listener() {
 			// Set m.Body by getting a slice from the pool for our needed length
 			m.body = c.pl.Get(blen)
 			// Read from the net connection to m.body
-			if n, err = c.nc.Read(m.body); err != nil {
+			if n, err = io.ReadFull(c.nc, m.body); err != nil {
 				// An error was encountered, break
 				break
 			}
