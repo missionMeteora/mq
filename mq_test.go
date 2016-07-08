@@ -48,7 +48,6 @@ func TestMain(m *testing.M) {
 	connected := make(chan struct{}, 1)
 	op := NewOp(
 		func(ch Chunk) error {
-			fmt.Println("Hai!", ch.String())
 			if ch == clntChunk {
 				connected <- struct{}{}
 			}
@@ -60,14 +59,23 @@ func TestMain(m *testing.M) {
 		},
 	)
 
-	if s, err = NewServer(mainPort, srvChunk, op); err != nil {
+	if s, err = NewServer(ServerOpts{
+		Name: srvName,
+		Loc:  mainPort,
+		Op:   op,
+	}); err != nil {
 		fmt.Println("Error getting new server", err)
 		return
 	}
 
 	s.PutAuth(clntName, clntTkn)
 
-	if c, err = NewClient(mainPort, clntChunk, clntTknChunk, nil); err != nil {
+	if c, err = NewClient(ClientOpts{
+		Name:  clntName,
+		Token: clntTkn,
+		Op:    op,
+		Loc:   mainPort,
+	}); err != nil {
 		fmt.Println("Error getting new client", err)
 		return
 	}
@@ -95,15 +103,26 @@ func TestClientFirst(t *testing.T) {
 		return nil
 	}, nil)
 
-	if c, err = NewClient(altPort, clntChunk, clntTknChunk, nil); err != nil {
+	if c, err = NewClient(ClientOpts{
+		Name:  clntName,
+		Token: clntTkn,
+		Op:    op,
+		Loc:   altPort,
+	}); err != nil {
 		t.Error("Error getting new client", err)
 		return
 	}
 
-	if s, err = NewServer(altPort, srvChunk, op, KeyToken{clntName, clntTkn}); err != nil {
+	if s, err = NewServer(ServerOpts{
+		Name: srvName,
+		Loc:  altPort,
+		Op:   op,
+	}); err != nil {
 		t.Error("Error getting new server", err)
 		return
 	}
+
+	s.PutAuth(clntName, clntTkn)
 
 	<-connected
 
@@ -124,16 +143,27 @@ func TestClientReconnect(t *testing.T) {
 
 	connected := make(chan struct{}, 1)
 	op := NewOp(func(ch Chunk) error {
+		fmt.Println("Connected?")
 		connected <- struct{}{}
 		return nil
 	}, nil)
 
-	if s, err = NewServer(altPort, srvChunk, op, KeyToken{clntName, clntTkn}); err != nil {
+	if s, err = NewServer(ServerOpts{
+		Name: srvName,
+		Loc:  altPort,
+	}); err != nil {
 		t.Error("Error getting new server", err)
 		return
 	}
 
-	if c, err = NewClient(altPort, clntChunk, clntTknChunk, nil); err != nil {
+	s.PutAuth(clntName, clntTkn)
+
+	if c, err = NewClient(ClientOpts{
+		Name:  clntName,
+		Token: clntTkn,
+		Op:    op,
+		Loc:   altPort,
+	}); err != nil {
 		t.Error("Error getting new client", err)
 		return
 	}
@@ -147,7 +177,12 @@ func TestClientReconnect(t *testing.T) {
 	}))
 	c.Close()
 
-	if c, err = NewClient(altPort, clntChunk, clntTknChunk, nil); err != nil {
+	if c, err = NewClient(ClientOpts{
+		Name:  clntName,
+		Token: clntTkn,
+		Op:    op,
+		Loc:   altPort,
+	}); err != nil {
 		t.Error("Error getting new client", err)
 		return
 	}
