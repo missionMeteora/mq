@@ -380,7 +380,7 @@ func readMsg(nc net.Conn) (m msg, err error) {
 		n   int             // Amount read
 	)
 
-	if n, err = nc.Read(buf[:]); err != nil {
+	if n, err = io.ReadFull(nc, buf[:]); err != nil {
 		// Error was encountered, break
 		return
 	} else if n != HeaderLen {
@@ -412,7 +412,7 @@ func readMsg(nc net.Conn) (m msg, err error) {
 		m.body = make([]byte, blen)
 
 		// Read from the net connection to m.body
-		if n, err = nc.Read(m.body); err != nil {
+		if n, err = io.ReadFull(nc, m.body); err != nil {
 			// An error was encountered, break
 			return
 		}
