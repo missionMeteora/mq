@@ -59,13 +59,16 @@ type Client struct {
 	closed uint32
 }
 
+func (c *Client) isClosed() bool {
+	return atomic.LoadUint32(&c.closed) == 1
+}
+
 func (c *Client) onDisconnect(key Chunk) {
 	if c.isClosed() {
 		return
 	}
 
 	go c.op.OnDisconnect(key)
-
 	c.dialb.Wait()
 	c.Dial()
 }
