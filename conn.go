@@ -170,6 +170,8 @@ func (c *conn) listener() {
 		}
 	}
 
+	go c.Close()
+
 	if err != io.EOF {
 		// If we have an error which does not equal io.EOF, send it to the error chan
 		c.errC.Send(err)
