@@ -1,18 +1,18 @@
 package mq
 
-import "github.com/missionMeteora/lockie"
+import "sync"
 
 // newAuth returns a pointer to a new instance of auth
 func newAuth() *auth {
 	return &auth{
-		mux: lockie.NewLockie(),
 		str: make(map[Chunk]Chunk),
 	}
 }
 
 // auth controls the authentication portion of the mq handshake
 type auth struct {
-	mux lockie.Lockie
+	// TODO (Josh): See about utilizing the R functionality
+	mux sync.Mutex
 
 	// Keyed by user's key with a value of the user's token
 	str map[Chunk]Chunk

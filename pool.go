@@ -1,9 +1,6 @@
 package mq
 
-import (
-	"sync"
-	//	"github.com/missionMeteora/lockie"
-)
+import "sync"
 
 const (
 	psSmall  = 32

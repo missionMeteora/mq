@@ -1,20 +1,21 @@
 package mq
 
 import (
+	"sync"
+
 	"github.com/missionMeteora/jump/uuid"
-	"github.com/missionMeteora/lockie"
 )
 
 func newReqWait() *reqWait {
 	return &reqWait{
-		mux: lockie.NewLockie(),
-		m:   make(map[uuid.UUID]ReqFunc),
+		m: make(map[uuid.UUID]ReqFunc),
 	}
 }
 
 // reqWait is for holding onto a RespFunc while waiting for an outbound request
 type reqWait struct {
-	mux lockie.Lockie
+	// TODO (Josh): See about utilizing the R functionality
+	mux sync.RWMutex
 	m   map[uuid.UUID]ReqFunc
 }
 
