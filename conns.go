@@ -2,21 +2,21 @@ package mq
 
 import (
 	"net"
+	"sync"
 
 	"github.com/missionMeteora/jump/chanchan"
-	"github.com/missionMeteora/lockie"
 )
 
 // newConns returns a pointer to a new instance of conns
 func newConns() *conns {
 	return &conns{
-		mux: lockie.NewLockie(),
-		m:   make(map[Chunk]*conn),
+		m: make(map[Chunk]*conn),
 	}
 }
 
 type conns struct {
-	mux lockie.Lockie
+	// TODO (Josh): See about utilizing the R functionality
+	mux sync.RWMutex
 
 	// Internal store of connections
 	m map[Chunk]*conn
