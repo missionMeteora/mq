@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 
 	"github.com/missionMeteora/jump/chanchan"
-	"github.com/missionMeteora/jump/errors"
+	"github.com/missionMeteora/toolkit/errors"
 )
 
 // NewServer returns a pointer to a new instance of Server
@@ -196,7 +196,7 @@ func (s *Server) Statement(key string, b []byte) (err error) {
 func (s *Server) StatementAll(b []byte) error {
 	var errs errors.ErrorList
 	s.c.ForEach(func(_ Chunk, c *conn) error {
-		errs = errs.Append(c.Statement(b))
+		errs.Push(c.Statement(b))
 		return nil
 	})
 
@@ -228,7 +228,7 @@ func (s *Server) Request(key string, b []byte, fn ReqFunc) (err error) {
 func (s *Server) RequestAll(b []byte, fn ReqFunc) error {
 	var errs errors.ErrorList
 	s.c.ForEach(func(_ Chunk, c *conn) error {
-		errs = errs.Append(c.Request(b, fn))
+		errs.Push(c.Request(b, fn))
 		return nil
 	})
 
@@ -278,9 +278,9 @@ func (s *Server) Close() error {
 	var errs errors.ErrorList
 
 	// Close listener
-	errs = errs.Append(s.l.Close())
+	errs.Push(s.l.Close())
 	s.c.ForEach(func(_ Chunk, c *conn) (cerr error) {
-		errs = errs.Append(c.Close())
+		errs.Push(c.Close())
 		return nil
 	})
 
