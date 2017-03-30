@@ -9,8 +9,8 @@ import (
 
 	"github.com/missionMeteora/iodb"
 	"github.com/missionMeteora/jump/chanchan"
-	"github.com/missionMeteora/jump/errors"
 	"github.com/missionMeteora/jump/uuid"
+	"github.com/missionMeteora/toolkit/errors"
 )
 
 // newConn returns a pointer to a new instance of conn
@@ -331,35 +331,27 @@ func (c *conn) Receive(rec Receiver) (err error) {
 
 // Close will close the conn and return a list of errors it encounters in the process
 func (c *conn) Close() error {
-	var errs errors.ErrorList
 	if atomic.SwapUint32(&c.state, 2) == 2 {
 		// We are already closed, so we can return at this point
-		return append(errs, ErrConnIsClosed).Err()
+		return ErrConnIsClosed
 	}
 
+	var errs errors.ErrorList
 	// Close outbound channel, we are not waiting for close because acquiring c.sm lock will ensure closure
-	if err := c.out.Close(false); err != nil {
-		// Err exists, append err to errs
-		errs = append(errs, err)
-	}
-
+	errs.Push(c.out.Close(false))
 	c.sm.Lock()
 
 	// Lock and close net.Conn to avoid additional inbound messages
 	c.ncm.Lock()
 	if c.nc != nil {
-		errs = errs.Append(c.nc.Close())
+		errs.Push(c.nc.Close())
 	}
 	c.ncm.Unlock()
 
 	// Close inbound channel, we are not waiting for close because acquiring c.lm lock will ensure closure
-	if err := c.in.Close(false); err != nil {
-		// Err exists, append err to errs
-		errs = append(errs, err)
-	}
+	errs.Push(c.in.Close(true))
 
 	c.lm.Lock()
-
 	// Dump remaining waiting funcs
 	c.rw.Dump()
 

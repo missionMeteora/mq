@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 
 	"github.com/missionMeteora/jump/chanchan"
-	"github.com/missionMeteora/jump/errors"
+	"github.com/missionMeteora/toolkit/errors"
 )
 
 // NewClient returns a pointer to a new instance of Client
@@ -120,12 +120,12 @@ func (c *Client) Close() error {
 	var errs errors.ErrorList
 	// Close our internal connection
 	if err := c.conn.Close(); err != nil {
-		errs = errs.Append(err)
+		errs.Push(err)
 	}
 
 	// Close our error channel
 	if err := c.errC.Close(false); err != nil {
-		errs = errs.Append(err)
+		errs.Push(err)
 	}
 
 	return errs.Err()
