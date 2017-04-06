@@ -11,7 +11,7 @@ func TestConn(t *testing.T) {
 
 	go func() {
 		var (
-			s   *Server
+			s   *Conn
 			msg string
 			err error
 		)
@@ -47,7 +47,7 @@ func TestConn(t *testing.T) {
 
 	go func() {
 		var (
-			c   *Client
+			c   *Conn
 			msg string
 			err error
 		)

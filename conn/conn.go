@@ -6,8 +6,9 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 
-"github.com/missionMeteora/toolkit/errors"
+	"github.com/missionMeteora/toolkit/errors"
 	"github.com/missionMeteora/uuid"
 )
 
@@ -16,7 +17,7 @@ func NewConn(nc net.Conn) *Conn {
 	var c Conn
 	c.nc = nc
 	c.buf = bytes.NewBuffer(nil)
-	c.key := uuid.New()
+	c.key = uuid.New()
 	return &c
 }
 
@@ -115,13 +116,13 @@ func (c *Conn) Close() (err error) {
 		return errors.ErrIsClosed
 	}
 
-err = c.nc.Close()
+	err = c.nc.Close()
 	c.closed = true
 
 	for _, fn := range c.onDisconnect {
 		fn(c)
 	}
-	
+
 	return
 }
 
