@@ -61,9 +61,7 @@ func (c *Conn) onConnect() (err error) {
 
 func (c *Conn) onDisconnect() (err error) {
 	for _, fn := range c.onDC {
-		if err = fn(c); err != nil {
-			return
-		}
+		fn(c)
 	}
 
 	return
@@ -245,4 +243,4 @@ func (c *Conn) Close() (err error) {
 type OnConnectFn func(*Conn) error
 
 // OnDisconnectFn is called when a connection ends
-type OnDisconnectFn func(*Conn) error
+type OnDisconnectFn func(*Conn)
