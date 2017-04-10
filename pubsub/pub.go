@@ -13,15 +13,13 @@ import (
 // NewPub will return a new publisher
 func NewPub(addr string) (pp *Pub, err error) {
 	var p Pub
-	p.sm = make(map[string]*conn.Conn)
-	p.out = journaler.New("Pub", addr)
-
-	var l net.Listener
-	if l, err = net.Listen("tcp", addr); err != nil {
+	if p.l, err = net.Listen("tcp", addr); err != nil {
 		return
 	}
 
-	go p.listen(l)
+	p.sm = make(map[string]*conn.Conn)
+	p.out = journaler.New("Pub", addr)
+
 	pp = &p
 	return
 }
@@ -29,8 +27,12 @@ func NewPub(addr string) (pp *Pub, err error) {
 // Pub is a publisher
 type Pub struct {
 	mux sync.RWMutex
-	sm  map[string]*conn.Conn
 	out *journaler.Journaler
+
+	l net.Listener
+
+	// Subscriber map
+	sm map[string]*conn.Conn
 
 	// On connect functions
 	onC []conn.OnConnectFn
@@ -40,22 +42,69 @@ type Pub struct {
 	closed bool
 }
 
-// Listen will listen for inbound subscribers
-func (p *Pub) listen(l net.Listener) {
-	var err error
+func (p *Pub) get(key string) (c *conn.Conn, ok bool) {
+	p.mux.RLock()
+	defer p.mux.RUnlock()
 
+	c, ok = p.sm[key]
+	return
+}
+
+func (p *Pub) getConn(key string) (c *conn.Conn, ok bool) {
+	p.mux.RLock()
+	c, ok = p.get(key)
+	p.mux.RUnlock()
+	return
+
+}
+
+func (p *Pub) close(wg *sync.WaitGroup) (errs *errors.ErrorList) {
+	errs = &errors.ErrorList{}
+	if p.closed {
+		errs.Push(errors.ErrIsClosed)
+		return
+	}
+
+	wg.Add(len(p.sm))
+	for _, s := range p.sm {
+		go func(c *conn.Conn) {
+			errs.Push(c.Close())
+			wg.Done()
+		}(s)
+	}
+
+	return
+}
+
+func (p *Pub) remove(c *conn.Conn) {
+	p.mux.Lock()
+	delete(p.sm, c.Key())
+	p.mux.Unlock()
+}
+
+// Listen will listen for inbound subscribers
+func (p *Pub) Listen() {
+	var err error
 	for {
 		var nc net.Conn
-		if nc, err = l.Accept(); err != nil {
+		if nc, err = p.l.Accept(); err != nil {
 			p.out.Error("", err)
 			continue
 		}
 
 		c := conn.NewConn()
 		c.OnDisconnect(p.remove)
-		c.Connect(nc)
 
 		p.mux.Lock()
+		for _, fn := range p.onC {
+			c.OnConnect(fn)
+		}
+
+		for _, fn := range p.onDC {
+			c.OnDisconnect(fn)
+		}
+
+		c.Connect(nc)
 		p.sm[c.Key()] = c
 		p.mux.Unlock()
 	}
@@ -78,11 +127,10 @@ func (p *Pub) OnDisconnect(fn conn.OnDisconnectFn) {
 // Put will broadcast a message to all subscribers
 func (p *Pub) Put(b []byte) {
 	p.mux.RLock()
-	defer p.mux.RUnlock()
-
 	for _, c := range p.sm {
 		c.Put(b)
 	}
+	p.mux.RUnlock()
 }
 
 // Subscribers will provide a map of subscribers with their creation time as the value
@@ -96,22 +144,6 @@ func (p *Pub) Subscribers() (sm map[string]time.Time) {
 	}
 
 	return
-}
-
-func (p *Pub) get(key string) (c *conn.Conn, ok bool) {
-	p.mux.RLock()
-	defer p.mux.RUnlock()
-
-	c, ok = p.sm[key]
-	return
-}
-
-func (p *Pub) getConn(key string) (c *conn.Conn, ok bool) {
-	p.mux.RLock()
-	c, ok = p.get(key)
-	p.mux.RUnlock()
-	return
-
 }
 
 // Remove will remove a subscriber
@@ -129,24 +161,6 @@ func (p *Pub) Remove(key string) (err error) {
 	return
 }
 
-func (p *Pub) close(wg *sync.WaitGroup) (errs *errors.ErrorList) {
-	errs = &errors.ErrorList{}
-	if p.closed {
-		errs.Push(errors.ErrIsClosed)
-		return
-	}
-
-	wg.Add(len(p.sm))
-	for _, s := range p.sm {
-		go func(c *conn.Conn) {
-			errs.Push(c.Close())
-			wg.Done()
-		}(s)
-	}
-
-	return
-}
-
 // Close will close the Pubber
 func (p *Pub) Close() error {
 	var wg sync.WaitGroup
@@ -155,10 +169,4 @@ func (p *Pub) Close() error {
 	p.mux.Unlock()
 	wg.Wait()
 	return errs.Err()
-}
-
-func (p *Pub) remove(c *conn.Conn) {
-	p.mux.Lock()
-	delete(p.sm, c.Key())
-	p.mux.Unlock()
 }
