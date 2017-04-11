@@ -25,8 +25,8 @@ const (
 	stateClosed
 )
 
-// NewConn will return a new connection
-func NewConn() *Conn {
+// New will return a new connection
+func New() *Conn {
 	var c Conn
 	c.buf = bytes.NewBuffer(nil)
 	c.key = uuid.New()

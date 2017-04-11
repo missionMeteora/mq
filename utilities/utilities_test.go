@@ -16,7 +16,7 @@ func TestBasicAuth(t *testing.T) {
 
 	go func() {
 		var (
-			s   = conn.NewConn()
+			s   = conn.New()
 			nc  net.Conn
 			err error
 		)
@@ -41,7 +41,7 @@ func TestBasicAuth(t *testing.T) {
 
 	go func() {
 		var (
-			c   = conn.NewConn()
+			c   = conn.New()
 			nc  net.Conn
 			err error
 		)
@@ -71,7 +71,7 @@ func TestBasicAuthFail(t *testing.T) {
 
 	go func() {
 		var (
-			s   = conn.NewConn()
+			s   = conn.New()
 			ba  = NewBasicAuth("foo", "bar")
 			nc  net.Conn
 			err error
@@ -93,7 +93,7 @@ func TestBasicAuthFail(t *testing.T) {
 
 	go func() {
 		var (
-			c   = conn.NewConn()
+			c   = conn.New()
 			ba  = NewBasicAuth("foo", "baz")
 			nc  net.Conn
 			err error

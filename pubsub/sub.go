@@ -86,7 +86,7 @@ func (s *Sub) Listen(cb func([]byte) (end bool)) (err error) {
 		return
 	}
 
-	s.c = conn.NewConn().OnConnect(s.onC...).OnDisconnect(s.onDC...)
+	s.c = conn.New().OnConnect(s.onC...).OnDisconnect(s.onDC...)
 
 	if err = s.c.Connect(nc); err != nil {
 		return

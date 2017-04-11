@@ -94,7 +94,7 @@ func (p *Pub) Listen() {
 		}
 
 		p.mux.Lock()
-		c := conn.NewConn().OnConnect(p.onC...).OnDisconnect(p.onDC...)
+		c := conn.New().OnConnect(p.onC...).OnDisconnect(p.onDC...)
 		if err = c.Connect(nc); err != nil {
 			p.out.Error("", err)
 		} else {

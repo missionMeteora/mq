@@ -18,7 +18,7 @@ func NewServer(addr string) (c *Conn, err error) {
 		return
 	}
 
-	c = NewConn()
+	c = New()
 	if err = c.Connect(nc); err != nil {
 		return
 	}
@@ -33,7 +33,7 @@ func NewClient(addr string) (c *Conn, err error) {
 		return
 	}
 
-	c = NewConn()
+	c = New()
 	c.Connect(nc)
 	return
 }
