@@ -48,13 +48,18 @@ func TestConn(t *testing.T) {
 	go func() {
 		var (
 			c   *Conn
+			nc net.Conn
 			msg string
 			err error
 		)
 
-		if c, err = NewClient(":1337"); err != nil {
+		var 
+		if nc, err = net.Dial("tcp", ":1337"); err != nil {
 			done <- err
 		}
+
+		c = New()
+		c.Connect(nc)
 
 		if msg, err = c.GetStr(); err != nil {
 			done <- err

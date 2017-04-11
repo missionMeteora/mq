@@ -25,15 +25,3 @@ func NewServer(addr string) (c *Conn, err error) {
 
 	return
 }
-
-// NewClient will return a new client connection
-func NewClient(addr string) (c *Conn, err error) {
-	var nc net.Conn
-	if nc, err = net.Dial("tcp", addr); err != nil {
-		return
-	}
-
-	c = New()
-	c.Connect(nc)
-	return
-}

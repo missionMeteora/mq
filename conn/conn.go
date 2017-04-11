@@ -134,7 +134,6 @@ func (c *Conn) close() (err error) {
 }
 
 func (c *Conn) setIdle() {
-	c.mux.Lock()
 	if c.state != stateIdle {
 		if c.nc != nil {
 			c.nc.Close()
@@ -143,7 +142,6 @@ func (c *Conn) setIdle() {
 		c.nc = nil
 		c.state = stateIdle
 	}
-	c.mux.Unlock()
 }
 
 func (c *Conn) setConnection(nc net.Conn) (err error) {
@@ -165,7 +163,9 @@ func (c *Conn) Connect(nc net.Conn) (err error) {
 	}
 
 	if err = c.onConnect(); err != nil {
+		c.mux.Lock()
 		c.setIdle()
+		c.mux.Unlock()
 	}
 
 	return
@@ -205,7 +205,9 @@ func (c *Conn) OnDisconnect(fns ...OnDisconnectFn) *Conn {
 // Note: If fn is nil, the message will be read and discarded
 func (c *Conn) Get(fn func([]byte)) (err error) {
 	c.mux.Lock()
-	err = c.get(fn)
+	if err = c.get(fn); err != nil {
+		c.setIdle()
+	}
 	c.mux.Unlock()
 	c.buf.Reset()
 	return
