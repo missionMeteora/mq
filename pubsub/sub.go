@@ -38,24 +38,23 @@ type Sub struct {
 	closed bool
 }
 
-func (s *Sub) reconnect() {
-	var (
-		c   *conn.Conn
-		err error
-	)
-
-	for c == nil {
-		if c, err = conn.NewClient(s.addr); err != nil {
+func (s *Sub) reconnect() (err error) {
+	for {
+		var nc net.Conn
+		if nc, err = net.Dial("tcp", s.addr); err != nil {
 			time.Sleep(time.Second * 5)
 			continue
 		}
+
+		if err = s.c.Connect(nc); err != nil {
+			s.out.Error("", err)
+			return
+		}
+
+		break
 	}
 
-	s.mux.Lock()
-	if !s.closed {
-		s.c = c
-	}
-	s.mux.Unlock()
+	return
 }
 
 // OnConnect will append an OnConnect func
@@ -101,17 +100,25 @@ func (s *Sub) Listen(cb func([]byte) (end bool)) (err error) {
 		}
 		s.mux.RUnlock()
 
-		if err != nil {
-			s.out.Error("", err)
-			break
+		switch err {
+		case nil:
+		case errors.ErrIsClosed:
+			return
+
+		default:
+			s.mux.RLock()
+			reconnect := !s.closed && s.cof
+			s.mux.RUnlock()
+			if !reconnect {
+				return
+			}
+
+			if err = s.reconnect(); err != nil {
+				return
+			}
 		}
 	}
 
-	s.mux.RLock()
-	if !s.closed && s.cof {
-		go s.reconnect()
-	}
-	s.mux.RUnlock()
 	return
 }
 

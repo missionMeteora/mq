@@ -66,6 +66,8 @@ func (p *Pub) close(wg *sync.WaitGroup) (errs *errors.ErrorList) {
 		return
 	}
 
+	errs.Push(p.l.Close())
+
 	wg.Add(len(p.sm))
 	for _, s := range p.sm {
 		go func(c *conn.Conn) {
@@ -89,8 +91,7 @@ func (p *Pub) Listen() {
 	for {
 		var nc net.Conn
 		if nc, err = p.l.Accept(); err != nil {
-			p.out.Error("", err)
-			continue
+			return
 		}
 
 		p.mux.Lock()

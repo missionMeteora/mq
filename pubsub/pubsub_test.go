@@ -5,6 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"fmt"
+
+	"github.com/missionMeteora/mq/conn"
 	"github.com/missionMeteora/mq/utilities"
 )
 
@@ -34,8 +37,28 @@ func TestPubSub(t *testing.T) {
 		time.Sleep(time.Millisecond * 30)
 		p.Put(testVal)
 		p.Put(testVal)
-		p.Put(testVal)
 		p.Close()
+
+		time.Sleep(time.Second)
+
+		// Start back up to test reconnection of client
+		if p, err = NewPub(":16777"); err != nil {
+			t.Fatal(err)
+		}
+
+		sema := make(chan struct{}, 1)
+		p.OnConnect(ba.Check, func(*conn.Conn) error {
+			sema <- struct{}{}
+			return nil
+		})
+
+		go p.Listen()
+
+		// Wait for reconnection
+		<-sema
+
+		// Put last value
+		p.Put(testVal)
 	}()
 
 	time.Sleep(time.Millisecond * 10)
@@ -49,7 +72,7 @@ func TestPubSub(t *testing.T) {
 
 		defer wg.Done()
 
-		s = NewSub(":16777", false)
+		s = NewSub(":16777", true)
 		s.OnConnect(ba.Auth)
 
 		err = s.Listen(func(b []byte) bool {
