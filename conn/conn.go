@@ -184,17 +184,21 @@ func (c *Conn) Created() time.Time {
 }
 
 // OnConnect will append an OnConnect func
-func (c *Conn) OnConnect(fn OnConnectFn) {
+// Note: The referenced conn is returned for chaining
+func (c *Conn) OnConnect(fns ...OnConnectFn) *Conn {
 	c.mux.Lock()
-	c.onC = append(c.onC, fn)
+	c.onC = append(c.onC, fns...)
 	c.mux.Unlock()
+	return c
 }
 
 // OnDisconnect will append an onDisconnect func
-func (c *Conn) OnDisconnect(fn OnDisconnectFn) {
+// Note: The referenced conn is returned for chaining
+func (c *Conn) OnDisconnect(fns ...OnDisconnectFn) *Conn {
 	c.mux.Lock()
-	c.onDC = append(c.onDC, fn)
+	c.onDC = append(c.onDC, fns...)
 	c.mux.Unlock()
+	return c
 }
 
 // Get will get a message
