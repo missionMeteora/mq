@@ -19,6 +19,7 @@ func NewPub(addr string) (pp *Pub, err error) {
 
 	p.sm = make(map[string]*conn.Conn)
 	p.out = journaler.New("Pub", addr)
+	p.onDC = append(p.onDC, p.remove)
 
 	pp = &p
 	return
@@ -92,35 +93,28 @@ func (p *Pub) Listen() {
 			continue
 		}
 
-		c := conn.NewConn()
-		c.OnDisconnect(p.remove)
-
 		p.mux.Lock()
-		for _, fn := range p.onC {
-			c.OnConnect(fn)
+		c := conn.NewConn().OnConnect(p.onC...).OnDisconnect(p.onDC...)
+		if err = c.Connect(nc); err != nil {
+			p.out.Error("", err)
+		} else {
+			p.sm[c.Key()] = c
 		}
-
-		for _, fn := range p.onDC {
-			c.OnDisconnect(fn)
-		}
-
-		c.Connect(nc)
-		p.sm[c.Key()] = c
 		p.mux.Unlock()
 	}
 }
 
 // OnConnect will append an OnConnect func
-func (p *Pub) OnConnect(fn conn.OnConnectFn) {
+func (p *Pub) OnConnect(fns ...conn.OnConnectFn) {
 	p.mux.Lock()
-	p.onC = append(p.onC, fn)
+	p.onC = append(p.onC, fns...)
 	p.mux.Unlock()
 }
 
 // OnDisconnect will append an onDisconnect func
-func (p *Pub) OnDisconnect(fn conn.OnDisconnectFn) {
+func (p *Pub) OnDisconnect(fns ...conn.OnDisconnectFn) {
 	p.mux.Lock()
-	p.onDC = append(p.onDC, fn)
+	p.onDC = append(p.onDC, fns...)
 	p.mux.Unlock()
 }
 

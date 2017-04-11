@@ -59,16 +59,16 @@ func (s *Sub) reconnect() {
 }
 
 // OnConnect will append an OnConnect func
-func (s *Sub) OnConnect(fn conn.OnConnectFn) {
+func (s *Sub) OnConnect(fns ...conn.OnConnectFn) {
 	s.mux.Lock()
-	s.onC = append(s.onC, fn)
+	s.onC = append(s.onC, fns...)
 	s.mux.Unlock()
 }
 
 // OnDisconnect will append an onDisconnect func
-func (s *Sub) OnDisconnect(fn conn.OnDisconnectFn) {
+func (s *Sub) OnDisconnect(fns ...conn.OnDisconnectFn) {
 	s.mux.Lock()
-	s.onDC = append(s.onDC, fn)
+	s.onDC = append(s.onDC, fns...)
 	s.mux.Unlock()
 }
 
@@ -86,15 +86,7 @@ func (s *Sub) Listen(cb func([]byte) (end bool)) (err error) {
 		return
 	}
 
-	s.c = conn.NewConn()
-
-	for _, fn := range s.onC {
-		s.c.OnConnect(fn)
-	}
-
-	for _, fn := range s.onDC {
-		s.c.OnDisconnect(fn)
-	}
+	s.c = conn.NewConn().OnConnect(s.onC...).OnDisconnect(s.onDC...)
 
 	if err = s.c.Connect(nc); err != nil {
 		return
