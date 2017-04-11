@@ -2,6 +2,7 @@ package conn
 
 import (
 	"fmt"
+	"net"
 	"testing"
 	"time"
 )
@@ -12,12 +13,23 @@ func TestConn(t *testing.T) {
 	go func() {
 		var (
 			s   *Conn
+			l   net.Listener
+			nc  net.Conn
 			msg string
 			err error
 		)
 
-		if s, err = NewServer(":1337"); err != nil {
-			done <- err
+		if l, err = net.Listen("tcp", ":1337"); err != nil {
+			return
+		}
+
+		if nc, err = l.Accept(); err != nil {
+			return
+		}
+
+		s = New()
+		if err = s.Connect(nc); err != nil {
+			return
 		}
 
 		if err = s.Put([]byte("hello 0")); err != nil {
@@ -48,12 +60,11 @@ func TestConn(t *testing.T) {
 	go func() {
 		var (
 			c   *Conn
-			nc net.Conn
+			nc  net.Conn
 			msg string
 			err error
 		)
 
-		var 
 		if nc, err = net.Dial("tcp", ":1337"); err != nil {
 			done <- err
 		}
