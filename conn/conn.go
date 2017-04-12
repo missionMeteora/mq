@@ -240,8 +240,12 @@ func (c *Conn) Close() (err error) {
 
 	// Call onDisconnect before we close the net.Conn
 	c.onDisconnect()
-	// Close net.Conn
-	err = c.nc.Close()
+
+	if c.nc != nil {
+		// Close net.Conn
+		err = c.nc.Close()
+	}
+
 	return
 }
 
