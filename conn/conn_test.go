@@ -3,8 +3,14 @@ package conn
 import (
 	"fmt"
 	"net"
+	"sync"
 	"testing"
 	"time"
+)
+
+var (
+	testVal    = []byte("hello world")
+	testSetVal []byte
 )
 
 func TestConn(t *testing.T) {
@@ -98,4 +104,88 @@ func TestConn(t *testing.T) {
 	if err := <-done; err != nil {
 		t.Fatal(err)
 	}
+}
+
+func BenchmarkMQ(b *testing.B) {
+	var (
+		s = New()
+		c = New()
+
+		ready = make(chan struct{}, 1)
+
+		l   net.Listener
+		wg  sync.WaitGroup
+		err error
+	)
+
+	wg.Add(b.N)
+
+	go func() {
+		var (
+			nc  net.Conn
+			err error
+		)
+
+		if l, err = net.Listen("tcp", ":1337"); err != nil {
+			b.Fatal(err)
+		}
+
+		ready <- struct{}{}
+
+		if nc, err = l.Accept(); err != nil {
+			b.Fatal(err)
+		}
+
+		if err = s.Connect(nc); err != nil {
+			b.Fatal(err)
+		}
+
+		ready <- struct{}{}
+	}()
+
+	<-ready
+
+	go func() {
+		var (
+			nc  net.Conn
+			err error
+		)
+
+		if nc, err = net.Dial("tcp", ":1337"); err != nil {
+			b.Fatal(err)
+		}
+
+		if err = c.Connect(nc); err != nil {
+			b.Fatal(err)
+		}
+
+		ready <- struct{}{}
+
+		var n int
+		for {
+			if c.Get(func(b []byte) {
+				testSetVal = b
+				n++
+				wg.Done()
+			}) != nil {
+				return
+			}
+		}
+	}()
+
+	<-ready
+	<-ready
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		if err = s.Put(testVal); err != nil {
+			b.Fatal(err)
+		}
+	}
+
+	wg.Wait()
+	b.ReportAllocs()
+	s.Close()
+	c.Close()
+	l.Close()
 }
