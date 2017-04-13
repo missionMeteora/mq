@@ -1,2 +1,6 @@
 profile/profile
 profile/output/*
+*.list
+*.pprof
+*.pdf
+*.test
