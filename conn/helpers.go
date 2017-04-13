@@ -23,13 +23,16 @@ func (b *buffer) ReadN(r io.Reader, n uint64) (err error) {
 		b.len = n
 	}
 
-	for b.n < ttl && err == nil {
+	for {
 		rn, err = r.Read(b.bs[b.n:b.len])
-		b.n += rn
-	}
+		if b.n += rn; b.n == ttl {
+			err = nil
+			break
+		}
 
-	if err == io.EOF && b.n == ttl {
-		err = nil
+		if err != nil {
+			break
+		}
 	}
 
 	return
