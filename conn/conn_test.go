@@ -114,28 +114,52 @@ func TestConn(t *testing.T) {
 	l.Close()
 }
 
-func BenchmarkMQ_Short(b *testing.B) {
-	benchmarkMQ(b, []byte("hello world"))
+func BenchmarkMQ_32B(b *testing.B) {
+	benchmarkMQ(b, make([]byte, 32))
 }
 
-func BenchmarkMQ_Medium(b *testing.B) {
+func BenchmarkMQ_128B(b *testing.B) {
 	benchmarkMQ(b, make([]byte, 128))
 }
 
-func BenchmarkMQ_Long(b *testing.B) {
+func BenchmarkMQ_1KB(b *testing.B) {
 	benchmarkMQ(b, make([]byte, 1024))
 }
 
-func BenchmarkMangos_Short(b *testing.B) {
-	benchmarkMangos(b, []byte("hello world"))
+func BenchmarkMQ_4KB(b *testing.B) {
+	benchmarkMQ(b, make([]byte, 1024*4))
 }
 
-func BenchmarkMangos_Medium(b *testing.B) {
+func BenchmarkMQ_16KB(b *testing.B) {
+	benchmarkMQ(b, make([]byte, 1024*16))
+}
+
+func BenchmarkMQ_1MB(b *testing.B) {
+	benchmarkMQ(b, make([]byte, 1024*1024))
+}
+
+func BenchmarkMangos_32B(b *testing.B) {
+	benchmarkMangos(b, make([]byte, 32))
+}
+
+func BenchmarkMangos_128B(b *testing.B) {
 	benchmarkMangos(b, make([]byte, 128))
 }
 
-func BenchmarkMangos_Long(b *testing.B) {
+func BenchmarkMangos_1KB(b *testing.B) {
 	benchmarkMangos(b, make([]byte, 1024))
+}
+
+func BenchmarkMangos_4KB(b *testing.B) {
+	benchmarkMangos(b, make([]byte, 1024*4))
+}
+
+func BenchmarkMangos_16KB(b *testing.B) {
+	benchmarkMangos(b, make([]byte, 1024*16))
+}
+
+func BenchmarkMangos_1MB(b *testing.B) {
+	benchmarkMangos(b, make([]byte, 1024*1024))
 }
 
 func benchmarkMQ(b *testing.B, val []byte) {
