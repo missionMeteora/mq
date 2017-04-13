@@ -2,7 +2,7 @@ package conn
 
 import (
 	"bytes"
-	"encoding/binary"
+	//	"encoding/binary"
 	"io"
 	"net"
 	"sync"
@@ -46,7 +46,9 @@ type Conn struct {
 	// On disconnect functions
 	onDC []OnDisconnectFn
 
-	mlen int64
+	l lengthy
+
+	mlen uint64
 
 	state uint8
 }
@@ -80,12 +82,12 @@ func (c *Conn) get(fn func([]byte)) (err error) {
 	}
 
 	// Read message length
-	if err = binary.Read(c.nc, binary.LittleEndian, &c.mlen); err != nil {
+	if c.mlen, err = c.l.Read(c.nc); err != nil {
 		return
 	}
 
 	// Read message
-	if _, err = io.CopyN(c.buf, c.nc, c.mlen); err != nil {
+	if _, err = io.CopyN(c.buf, c.nc, int64(c.mlen)); err != nil {
 		return
 	}
 
@@ -108,11 +110,8 @@ func (c *Conn) put(b []byte) (err error) {
 		return ErrIsIdle
 	}
 
-	// Set message length
-	c.mlen = int64(len(b))
-
 	// Write the message length
-	if err = binary.Write(c.nc, binary.LittleEndian, &c.mlen); err != nil {
+	if err = c.l.Write(c.nc, uint64(len(b))); err != nil {
 		return
 	}
 
