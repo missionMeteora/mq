@@ -6,6 +6,10 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/go-mangos/mangos"
+	mpair "github.com/go-mangos/mangos/protocol/pair"
+	mtcp "github.com/go-mangos/mangos/transport/tcp"
 )
 
 var (
@@ -14,12 +18,16 @@ var (
 )
 
 func TestConn(t *testing.T) {
+	var l net.Listener
+	s := New()
+	c := New()
 	done := make(chan error, 1)
+
+	defer s.Close()
+	defer c.Close()
 
 	go func() {
 		var (
-			s   *Conn
-			l   net.Listener
 			nc  net.Conn
 			msg string
 			err error
@@ -33,7 +41,6 @@ func TestConn(t *testing.T) {
 			return
 		}
 
-		s = New()
 		if err = s.Connect(nc); err != nil {
 			return
 		}
@@ -65,7 +72,6 @@ func TestConn(t *testing.T) {
 
 	go func() {
 		var (
-			c   *Conn
 			nc  net.Conn
 			msg string
 			err error
@@ -104,9 +110,35 @@ func TestConn(t *testing.T) {
 	if err := <-done; err != nil {
 		t.Fatal(err)
 	}
+
+	l.Close()
 }
 
-func BenchmarkMQ(b *testing.B) {
+func BenchmarkMQ_Short(b *testing.B) {
+	benchmarkMQ(b, []byte("hello world"))
+}
+
+func BenchmarkMQ_Medium(b *testing.B) {
+	benchmarkMQ(b, make([]byte, 128))
+}
+
+func BenchmarkMQ_Long(b *testing.B) {
+	benchmarkMQ(b, make([]byte, 1024))
+}
+
+func BenchmarkMangos_Short(b *testing.B) {
+	benchmarkMangos(b, []byte("hello world"))
+}
+
+func BenchmarkMangos_Medium(b *testing.B) {
+	benchmarkMangos(b, make([]byte, 128))
+}
+
+func BenchmarkMangos_Long(b *testing.B) {
+	benchmarkMangos(b, make([]byte, 1024))
+}
+
+func benchmarkMQ(b *testing.B, val []byte) {
 	var (
 		s = New()
 		c = New()
@@ -178,7 +210,7 @@ func BenchmarkMQ(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		if err = s.Put(testVal); err != nil {
+		if err = s.Put(val); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -188,4 +220,64 @@ func BenchmarkMQ(b *testing.B) {
 	s.Close()
 	c.Close()
 	l.Close()
+}
+
+func benchmarkMangos(b *testing.B, val []byte) {
+	var (
+		s  mangos.Socket
+		c  mangos.Socket
+		wg sync.WaitGroup
+	)
+
+	ready := make(chan struct{}, 1)
+
+	go func() {
+		var err error
+		if s, err = mpair.NewSocket(); err != nil {
+			b.Fatal(err)
+		}
+
+		s.AddTransport(mtcp.NewTransport())
+
+		ready <- struct{}{}
+		if err = s.Listen("tcp://127.0.0.1:1337"); err != nil {
+			b.Fatal(err)
+		}
+	}()
+
+	<-ready
+
+	go func() {
+		var err error
+		if c, err = mpair.NewSocket(); err != nil {
+			b.Fatal(err)
+		}
+
+		c.AddTransport(mtcp.NewTransport())
+		if err = c.Dial("tcp://127.0.0.1:1337"); err != nil {
+			b.Fatal(err)
+		}
+
+		ready <- struct{}{}
+
+		for {
+			if testSetVal, err = c.Recv(); err != nil {
+				break
+			}
+
+			wg.Done()
+		}
+	}()
+
+	<-ready
+	wg.Add(b.N)
+
+	for i := 0; i < b.N; i++ {
+		s.Send(val)
+	}
+
+	wg.Wait()
+	b.ReportAllocs()
+	s.Close()
+	c.Close()
 }
