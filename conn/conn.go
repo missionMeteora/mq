@@ -46,6 +46,8 @@ type Conn struct {
 	// On disconnect functions
 	onDC []OnDisconnectFn
 
+	mlen int64
+
 	state uint8
 }
 
@@ -77,14 +79,13 @@ func (c *Conn) get(fn func([]byte)) (err error) {
 		return ErrIsIdle
 	}
 
-	var mlen int64
 	// Read message length
-	if err = binary.Read(c.nc, binary.LittleEndian, &mlen); err != nil {
+	if err = binary.Read(c.nc, binary.LittleEndian, &c.mlen); err != nil {
 		return
 	}
 
 	// Read message
-	if _, err = io.CopyN(c.buf, c.nc, mlen); err != nil {
+	if _, err = io.CopyN(c.buf, c.nc, c.mlen); err != nil {
 		return
 	}
 
@@ -108,10 +109,10 @@ func (c *Conn) put(b []byte) (err error) {
 	}
 
 	// Set message length
-	mlen := int64(len(b))
+	c.mlen = int64(len(b))
 
 	// Write the message length
-	if err = binary.Write(c.nc, binary.LittleEndian, &mlen); err != nil {
+	if err = binary.Write(c.nc, binary.LittleEndian, &c.mlen); err != nil {
 		return
 	}
 
