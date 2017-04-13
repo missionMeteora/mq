@@ -26,6 +26,7 @@ const (
 func New() *Conn {
 	var c Conn
 	//	c.buf = bytes.NewBuffer(nil)
+	c.buf = newBuffer()
 	c.key = uuid.New()
 	return &c
 }
@@ -35,7 +36,7 @@ type Conn struct {
 	mux sync.RWMutex
 	nc  net.Conn
 	//	buf *bytes.Buffer
-	buf buffer
+	buf *buffer
 
 	key uuid.UUID
 

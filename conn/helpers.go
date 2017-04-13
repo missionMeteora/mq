@@ -2,39 +2,31 @@ package conn
 
 import (
 	//"bytes"
+	"fmt"
 	"io"
 )
 
+func newBuffer() *buffer {
+	return &buffer{
+		bs: make([]byte, 32*1024),
+	}
+}
+
 type buffer struct {
-	bs  []byte
-	len uint64
-	n   int
+	bs []byte
+	n  int
 }
 
 // ReadN will read n bytes from an io.Reader
 // Note: Internal byteslice resets on each read
 func (b *buffer) ReadN(r io.Reader, n uint64) (err error) {
-	var rn int
-	ttl := int(n)
-	b.n = 0
-	if n > b.len {
+	if int(n) > len(b.bs) {
+		fmt.Println("GROW", n, len(b.bs))
 		// Our internal slice is too small, grow before reading
 		b.bs = make([]byte, n)
-		b.len = n
 	}
 
-	for {
-		rn, err = r.Read(b.bs[b.n:b.len])
-		if b.n += rn; b.n == ttl {
-			err = nil
-			break
-		}
-
-		if err != nil {
-			break
-		}
-	}
-
+	b.n, err = io.ReadFull(r, b.bs[:n])
 	return
 }
 
