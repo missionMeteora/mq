@@ -11,6 +11,8 @@ import (
 	"github.com/go-mangos/mangos"
 	mpair "github.com/go-mangos/mangos/protocol/pair"
 	mtcp "github.com/go-mangos/mangos/transport/tcp"
+
+	"github.com/pkg/profile"
 )
 
 var setVal []byte
@@ -18,17 +20,19 @@ var setVal []byte
 const reportFmt = "%s sent %d messages with a size of %d bytes in an average of %v\n"
 
 func main() {
-	reportMQ(32, 1000000)
-	reportMQ(128, 1000000)
-	reportMQ(1024, 1000000)
+	p := profile.Start(profile.CPUProfile, profile.ProfilePath("."), profile.NoShutdownHook)
+	//	reportMQ(32, 1000000)
+	//	reportMQ(128, 1000000)
+	//	reportMQ(1024, 1000000)
 	reportMQ(1024*4, 1000000)
-	reportMQ(1024*32, 1000000)
+	p.Stop()
+	//	reportMQ(1024*32, 1000000)
 
-	reportMangos(32, 1000000)
-	reportMangos(128, 1000000)
-	reportMangos(1024, 1000000)
-	reportMangos(1024*4, 1000000)
-	reportMangos(1024*32, 1000000)
+	//	reportMangos(32, 1000000)
+	//	reportMangos(128, 1000000)
+	//	reportMangos(1024, 1000000)
+	//	reportMangos(1024*4, 1000000)
+	//	reportMangos(1024*32, 1000000)
 }
 
 func reportMQ(sz, n int) {
