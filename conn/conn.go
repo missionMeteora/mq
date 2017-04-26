@@ -1,9 +1,6 @@
 package conn
 
 import (
-	"bytes"
-	//	"encoding/binary"
-	"io"
 	"net"
 	"sync"
 	"time"
@@ -28,7 +25,8 @@ const (
 // New will return a new connection
 func New() *Conn {
 	var c Conn
-	c.buf = bytes.NewBuffer(nil)
+	//	c.buf = bytes.NewBuffer(nil)
+	c.buf = newBuffer()
 	c.key = uuid.New()
 	return &c
 }
@@ -37,7 +35,8 @@ func New() *Conn {
 type Conn struct {
 	mux sync.RWMutex
 	nc  net.Conn
-	buf *bytes.Buffer
+	//	buf *bytes.Buffer
+	buf *buffer
 
 	key uuid.UUID
 
@@ -87,7 +86,7 @@ func (c *Conn) get(fn func([]byte)) (err error) {
 	}
 
 	// Read message
-	if _, err = io.CopyN(c.buf, c.nc, int64(c.mlen)); err != nil {
+	if err = c.buf.ReadN(c.nc, c.mlen); err != nil {
 		return
 	}
 
@@ -209,7 +208,6 @@ func (c *Conn) Get(fn func([]byte)) (err error) {
 		c.setIdle()
 	}
 	c.mux.Unlock()
-	c.buf.Reset()
 	return
 }
 

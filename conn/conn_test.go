@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"bytes"
 	"github.com/go-mangos/mangos"
 	mpair "github.com/go-mangos/mangos/protocol/pair"
 	mtcp "github.com/go-mangos/mangos/transport/tcp"
@@ -112,6 +113,27 @@ func TestConn(t *testing.T) {
 	}
 
 	l.Close()
+}
+
+func TestBuffer(t *testing.T) {
+	var b buffer
+	buf := bytes.NewBuffer(nil)
+	buf.WriteString("hello world")
+
+	b.ReadN(buf, 4)
+	if string(b.Bytes()) != "hell" {
+		t.Fatal("invalid value")
+	}
+
+	b.ReadN(buf, 4)
+	if string(b.Bytes()) != "o wo" {
+		t.Fatal("invalid value")
+	}
+
+	b.ReadN(buf, 4)
+	if string(b.Bytes()) != "rld" {
+		t.Fatal("invalid value")
+	}
 }
 
 func BenchmarkMQ_32B(b *testing.B) {
