@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"bytes"
 	"github.com/missionMeteora/toolkit/errors"
 	"github.com/missionMeteora/uuid"
 )
@@ -25,8 +26,8 @@ const (
 // New will return a new connection
 func New() Conn {
 	var c conn
-	c.buf = newBuffer()
 	c.key = uuid.New()
+	c.wbuf = bytes.NewBuffer(nil)
 	return &c
 }
 
@@ -47,9 +48,10 @@ type conn struct {
 	mux sync.RWMutex
 	nc  net.Conn
 
-	key uuid.UUID
-	buf *buffer
-	l   lengthy
+	key  uuid.UUID
+	buf  buffer
+	wbuf *bytes.Buffer
+	l    lengthy
 
 	onC []OnConnectFn
 	onD []OnDisconnectFn
@@ -99,12 +101,15 @@ func (c *conn) put(b []byte) (err error) {
 	}
 
 	// Write the message length
-	if err = c.l.Write(c.nc, uint64(len(b))); err != nil {
+	if err = c.l.Write(c.wbuf, uint64(len(b))); err != nil {
 		return
 	}
 
-	// Write message
-	_, err = c.nc.Write(b)
+	c.wbuf.Write(b)
+
+	// Write message to net.Conn
+	_, err = c.nc.Write(c.wbuf.Bytes())
+	c.wbuf.Reset()
 	return
 }
 
