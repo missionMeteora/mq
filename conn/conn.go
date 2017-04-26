@@ -23,55 +23,44 @@ const (
 )
 
 // New will return a new connection
-func New() *Conn {
-	var c Conn
-	//	c.buf = bytes.NewBuffer(nil)
+func New() Conn {
+	var c conn
 	c.buf = newBuffer()
 	c.key = uuid.New()
 	return &c
 }
 
-// Conn is a connection
-type Conn struct {
+// Conn is a connection interface
+type Conn interface {
+	Connect(nc net.Conn) (err error)
+	Key() string
+	Created() time.Time
+	OnDisconnect(fns ...OnDisconnectFn) *conn
+	Get(fn func([]byte)) (err error)
+	GetStr() (msg string, err error)
+	Put(b []byte) (err error)
+	Close() (err error)
+}
+
+// conn is a connection
+type conn struct {
 	mux sync.RWMutex
 	nc  net.Conn
-	//	buf *bytes.Buffer
-	buf *buffer
 
 	key uuid.UUID
+	buf *buffer
+	l   lengthy
 
-	// On connect functions
 	onC []OnConnectFn
-	// On disconnect functions
-	onDC []OnDisconnectFn
-
-	l lengthy
+	onD []OnDisconnectFn
 
 	mlen uint64
 
 	state uint8
 }
 
-func (c *Conn) onConnect() (err error) {
-	for _, fn := range c.onC {
-		if err = fn(c); err != nil {
-			return
-		}
-	}
-
-	return
-}
-
-func (c *Conn) onDisconnect() (err error) {
-	for _, fn := range c.onDC {
-		fn(c)
-	}
-
-	return
-}
-
 // get is a raw internal call for getting a message, does not handle locking nor post-get cleanup
-func (c *Conn) get(fn func([]byte)) (err error) {
+func (c *conn) get(fn func([]byte)) (err error) {
 	// Let's ensure our connection is not closed or idle
 	switch c.state {
 	case stateClosed:
@@ -100,7 +89,7 @@ func (c *Conn) get(fn func([]byte)) (err error) {
 }
 
 // put is the raw internal call for sending a message, does not handle locking
-func (c *Conn) put(b []byte) (err error) {
+func (c *conn) put(b []byte) (err error) {
 	// Let's ensure our connection is not closed or idle
 	switch c.state {
 	case stateClosed:
@@ -119,31 +108,23 @@ func (c *Conn) put(b []byte) (err error) {
 	return
 }
 
-// close will set the state to closed
-func (c *Conn) close() (err error) {
-	c.mux.Lock()
-	defer c.mux.Unlock()
-
-	if c.state == stateClosed {
-		return errors.ErrIsClosed
+func (c *conn) onConnect() (err error) {
+	for _, fn := range c.onC {
+		if err = fn(c); err != nil {
+			return
+		}
 	}
 
-	c.state = stateClosed
 	return
 }
 
-func (c *Conn) setIdle() {
-	if c.state != stateIdle {
-		if c.nc != nil {
-			c.nc.Close()
-		}
-
-		c.nc = nil
-		c.state = stateIdle
+func (c *conn) onDisconnect() {
+	for _, fn := range c.onD {
+		fn(c)
 	}
 }
 
-func (c *Conn) setConnection(nc net.Conn) (err error) {
+func (c *conn) setConnection(nc net.Conn) (err error) {
 	c.mux.Lock()
 	if c.state != stateIdle {
 		err = ErrCannotConnect
@@ -155,54 +136,74 @@ func (c *Conn) setConnection(nc net.Conn) (err error) {
 	return
 }
 
+func (c *conn) setIdle() {
+	if c.state == stateIdle {
+		// conn is already idle, return early
+		return
+	}
+
+	if c.nc != nil {
+		// net.Conn exists, let's close it
+		c.nc.Close()
+	}
+
+	// Update conn values
+	c.nc = nil
+	c.state = stateIdle
+}
+
+// close will set the state to closed
+func (c *conn) close() (err error) {
+	c.mux.Lock()
+	defer c.mux.Unlock()
+
+	if c.state == stateClosed {
+		// conn is already closed
+		return errors.ErrIsClosed
+	}
+
+	c.state = stateClosed
+	return
+}
+
 // Connect will connect a connection to a net.Conn
-func (c *Conn) Connect(nc net.Conn) (err error) {
+func (c *conn) Connect(nc net.Conn) (err error) {
 	if err = c.setConnection(nc); err != nil {
 		return
 	}
 
-	if err = c.onConnect(); err != nil {
-		c.mux.Lock()
-		c.setIdle()
-		c.mux.Unlock()
-	}
-
-	return
+	return c.onConnect()
 }
 
 // Key will return the generated key for a connection
-func (c *Conn) Key() string {
+func (c *conn) Key() string {
 	// We don't need to lock because the key never changes after creation
 	return c.key.String()
 }
 
 // Created will return the created time for a connection
-func (c *Conn) Created() time.Time {
+func (c *conn) Created() time.Time {
 	// We don't need to lock because the key never changes after creation
 	return c.key.Time()
 }
 
-// OnConnect will append an OnConnect func
-// Note: The referenced conn is returned for chaining
-func (c *Conn) OnConnect(fns ...OnConnectFn) *Conn {
-	c.mux.Lock()
+// OnConnect will append an OnConnect func, referenced conn is returned for chaining
+// Note: This function is intended to be called before connection, it is NOT thread-safe
+func (c *conn) OnConnect(fns ...OnConnectFn) *conn {
 	c.onC = append(c.onC, fns...)
-	c.mux.Unlock()
 	return c
 }
 
-// OnDisconnect will append an onDisconnect func
-// Note: The referenced conn is returned for chaining
-func (c *Conn) OnDisconnect(fns ...OnDisconnectFn) *Conn {
-	c.mux.Lock()
-	c.onDC = append(c.onDC, fns...)
-	c.mux.Unlock()
+// OnDisconnect will append an onDisconnect func, referenced conn is returned for chaining
+// Note: This function is intended to be called before connection, it is NOT thread-safe
+func (c *conn) OnDisconnect(fns ...OnDisconnectFn) *conn {
+	c.onD = append(c.onD, fns...)
 	return c
 }
 
 // Get will get a message
 // Note: If fn is nil, the message will be read and discarded
-func (c *Conn) Get(fn func([]byte)) (err error) {
+func (c *conn) Get(fn func([]byte)) (err error) {
 	c.mux.Lock()
 	if err = c.get(fn); err != nil {
 		c.setIdle()
@@ -213,7 +214,7 @@ func (c *Conn) Get(fn func([]byte)) (err error) {
 
 // GetStr will get a message as a string
 // Note: This is just a helper utility
-func (c *Conn) GetStr() (msg string, err error) {
+func (c *conn) GetStr() (msg string, err error) {
 	err = c.Get(func(b []byte) {
 		msg = string(b)
 	})
@@ -222,7 +223,7 @@ func (c *Conn) GetStr() (msg string, err error) {
 }
 
 // Put will put a message
-func (c *Conn) Put(b []byte) (err error) {
+func (c *conn) Put(b []byte) (err error) {
 	c.mux.Lock()
 	err = c.put(b)
 	c.mux.Unlock()
@@ -230,7 +231,7 @@ func (c *Conn) Put(b []byte) (err error) {
 }
 
 // Close will close a connection
-func (c *Conn) Close() (err error) {
+func (c *conn) Close() (err error) {
 	if err = c.close(); err != nil {
 		// Connection is already closed, return early
 		return
@@ -248,7 +249,7 @@ func (c *Conn) Close() (err error) {
 }
 
 // OnConnectFn is called when a connection occurs
-type OnConnectFn func(*Conn) error
+type OnConnectFn func(*conn) error
 
 // OnDisconnectFn is called when a connection ends
-type OnDisconnectFn func(*Conn)
+type OnDisconnectFn func(*conn)
