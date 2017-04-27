@@ -2,7 +2,7 @@
 MQ is a simple message queue written in Go
 
 # Benchmarks
-```
+```bash
 # go version go1.8.1 linux/amd64
 BenchmarkMQ_32B-4         	 2000000        1136 ns/op           32 B/op       1 allocs/op
 BenchmarkMangos_32B-4     	  200000        8261 ns/op           65 B/op       5 allocs/op
@@ -33,7 +33,6 @@ BenchmarkMangos_512KB-4   	    5000      334432 ns/op      1573387 B/op      11 
 
 BenchmarkMQ_1MB-4         	   10000      158345 ns/op          136 B/op       1 allocs/op
 BenchmarkMangos_1MB-4     	    2000      752500 ns/op      3146674 B/op      11 allocs/op
-
 
 
 
