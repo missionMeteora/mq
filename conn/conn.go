@@ -1,11 +1,11 @@
 package conn
 
 import (
+	"bytes"
 	"net"
 	"sync"
 	"time"
 
-	"bytes"
 	"github.com/missionMeteora/toolkit/errors"
 	"github.com/missionMeteora/uuid"
 )
@@ -49,7 +49,7 @@ type conn struct {
 	nc  net.Conn
 
 	key  uuid.UUID
-	buf  buffer
+	rbuf buffer
 	wbuf *bytes.Buffer
 	l    lengthy
 
@@ -77,14 +77,14 @@ func (c *conn) get(fn func([]byte)) (err error) {
 	}
 
 	// Read message
-	if err = c.buf.ReadN(c.nc, c.mlen); err != nil {
+	if err = c.rbuf.ReadN(c.nc, c.mlen); err != nil {
 		return
 	}
 
 	if fn != nil {
 		// Please do not use the bytes outside of the called functions\
 		// I'll be a sad panda if you create a race condition
-		fn(c.buf.Bytes())
+		fn(c.rbuf.Bytes())
 	}
 
 	return
