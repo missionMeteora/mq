@@ -1,7 +1,12 @@
-# MQ 
+# MQ [![GoDoc](https://godoc.org/github.com/missionMeteora/mq?status.svg)](https://godoc.org/github.com/missionMeteora/mq) ![Status](https://img.shields.io/badge/status-beta-yellow.svg)
 MQ is a simple message queue written in Go
 
-# Benchmarks
+## Usage
+```go
+// TODO: add a usage example
+```
+
+## Benchmarks
 ```bash
 # go version go1.8.1 linux/amd64
 BenchmarkMQ_32B-4         	 2000000        1136 ns/op           32 B/op       1 allocs/op
