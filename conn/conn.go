@@ -23,6 +23,11 @@ const (
 	stateClosed
 )
 
+const (
+	// noCopySize is the size limit for copying values into the write buffer on puts
+	noCopySize = 1024 * 32
+)
+
 // New will return a new connection
 func New() Conn {
 	var c conn
@@ -100,8 +105,18 @@ func (c *conn) put(b []byte) (err error) {
 		return ErrIsIdle
 	}
 
+	blen := uint64(len(b))
+	if blen < noCopySize {
+		return c.smallWrite(b, blen)
+	}
+
+	return c.largeWrite(b, blen)
+
+}
+
+func (c *conn) smallWrite(b []byte, blen uint64) (err error) {
 	// Write the message length
-	if err = c.l.Write(c.wbuf, uint64(len(b))); err != nil {
+	if err = c.l.Write(c.wbuf, blen); err != nil {
 		return
 	}
 
@@ -110,6 +125,17 @@ func (c *conn) put(b []byte) (err error) {
 	// Write message to net.Conn
 	_, err = c.nc.Write(c.wbuf.Bytes())
 	c.wbuf.Reset()
+	return
+}
+
+func (c *conn) largeWrite(b []byte, blen uint64) (err error) {
+	// Write the message length
+	if err = c.l.Write(c.nc, blen); err != nil {
+		return
+	}
+
+	// Write message to net.Conn
+	_, err = c.nc.Write(b)
 	return
 }
 

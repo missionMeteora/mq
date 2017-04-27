@@ -156,6 +156,22 @@ func BenchmarkMQ_16KB(b *testing.B) {
 	benchmarkMQ(b, make([]byte, 1024*16))
 }
 
+func BenchmarkMQ_32KB(b *testing.B) {
+	benchmarkMQ(b, make([]byte, 1024*32))
+}
+
+func BenchmarkMQ_64KB(b *testing.B) {
+	benchmarkMQ(b, make([]byte, 1024*64))
+}
+
+func BenchmarkMQ_256KB(b *testing.B) {
+	benchmarkMQ(b, make([]byte, 1024*256))
+}
+
+func BenchmarkMQ_512KB(b *testing.B) {
+	benchmarkMQ(b, make([]byte, 1024*512))
+}
+
 func BenchmarkMQ_1MB(b *testing.B) {
 	benchmarkMQ(b, make([]byte, 1024*1024))
 }
@@ -178,6 +194,22 @@ func BenchmarkMangos_4KB(b *testing.B) {
 
 func BenchmarkMangos_16KB(b *testing.B) {
 	benchmarkMangos(b, make([]byte, 1024*16))
+}
+
+func BenchmarkMangos_32KB(b *testing.B) {
+	benchmarkMangos(b, make([]byte, 1024*32))
+}
+
+func BenchmarkMangos_64KB(b *testing.B) {
+	benchmarkMangos(b, make([]byte, 1024*64))
+}
+
+func BenchmarkMangos_256KB(b *testing.B) {
+	benchmarkMangos(b, make([]byte, 1024*256))
+}
+
+func BenchmarkMangos_512KB(b *testing.B) {
+	benchmarkMangos(b, make([]byte, 1024*512))
 }
 
 func BenchmarkMangos_1MB(b *testing.B) {
